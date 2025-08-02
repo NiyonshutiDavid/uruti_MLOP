@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Requests</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>User Requests</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Input Text</th>
+                    <th>Predicted Label</th>
+                    <th>Timestamp</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- User requests will be loaded here -->
+            </tbody>
+        </table>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/requests')
+                .then(response => response.json())
+                .then(data => {
+                    const tbody = document.querySelector('table tbody');
+                    data.forEach(request => {
+                        const row = document.createElement('tr');
+                        const inputTextCell = document.createElement('td');
+                        const predictedLabelCell = document.createElement('td');
+                        const timestampCell = document.createElement('td');
+
+                        inputTextCell.textContent = request.input_text;
+                        predictedLabelCell.textContent = request.predicted_label;
+                        timestampCell.textContent = new Date(request.timestamp).toLocaleString(); // Format timestamp
+
+                        row.appendChild(inputTextCell);
+                        row.appendChild(predictedLabelCell);
+                        row.appendChild(timestampCell);
+
+                        tbody.appendChild(row);
+                    });
+                })
+                .catch(error => console.error('Error fetching requests:', error));
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Model Retraining</title>
+    <link rel="stylesheet" href="/static/styles.css">
+</head>
+<body>
+    <div class="container">
+        <h1>Model Retraining</h1>
+        <button id="retrain-button">Trigger Retraining</button>
+        <div id="retrain-status" style="margin-top: 20px;">
+            <!-- Retraining status will be displayed here -->
+        </div>
+    </div>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const retrainButton = document.getElementById('retrain-button');
+            const retrainStatusDiv = document.getElementById('retrain-status');
+
+            retrainButton.addEventListener('click', function() {
+                retrainStatusDiv.textContent = "Triggering retraining...";
+
+                fetch('/trigger_retraining', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({}) // Sending an empty JSON body as the endpoint doesn't require specific data
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    retrainStatusDiv.textContent = `Status: ${data.status}, Message: ${data.message}`;
+                })
+                .catch(error => {
+                    console.error('Error triggering retraining:', error);
+                    retrainStatusDiv.textContent = `Error: ${error.message}`;
+                });
+            });
+        });
+    </script>
+</body>
+</html>
