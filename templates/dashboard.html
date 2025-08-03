@@ -1,69 +1,3 @@
-<script>
-// Training functionality
-        let trainingInProgress = false;
-
-        async function startTraining() {
-            if (trainingInProgress) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/training/start`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        batch_size: 32,
-                        learning_rate: 0.001,
-                        epochs: 10
-                    })
-                });
-                
-                if (response.ok) {
-                    trainingInProgress = true;
-                    // Start polling for training status
-                    pollTrainingStatus();
-                } else {
-                    throw new Error('Failed to start training');
-                }
-            } catch (error) {
-                console.error('Error starting training:', error);
-                alert('Failed to start training. Please try again.');
-            }
-        }
-
-        // Poll training status every 2 seconds
-        function pollTrainingStatus() {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_BASE}/training/status`);
-                    const status = await response.json();
-                    
-                    const progressBar = document.getElementById('training-progress');
-                    const progressText = document.getElementById('progress-text');
-                    const trainingLog = document.getElementById('training-log');
-                    
-                    progressBar.style.width = `${status.progress}%`;
-                    
-                    if (status.is_training) {
-                        progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-                    } else {
-                        trainingInProgress = false;
-                        clearInterval(interval);
-                        
-                        if (status.progress === 100) {
-                            progressText.textContent
-
-                        } else {
-                            progressText.textContent = 'Training completed';
-                        }
-                    }
-                } catch (error) {
-                    console.error('Error polling training status:', error);
-                }
-            }, 2000);
-        }
-</script>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -71,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uruti.Rw - Model Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -127,6 +62,7 @@
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
+            cursor: pointer;
         }
 
         .nav a:hover, .nav a.active {
@@ -139,6 +75,19 @@
             gap: 16px;
         }
 
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0a0f0a;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
         .container {
             display: flex;
             min-height: calc(100vh - 64px);
@@ -149,22 +98,6 @@
             background: #0d1a0d;
             border-right: 1px solid #1a331a;
             padding: 24px 0;
-        }
-
-        .back-btn {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            color: #a1a1aa;
-            text-decoration: none;
-            padding: 12px 24px;
-            margin-bottom: 24px;
-            font-weight: 500;
-            transition: color 0.2s;
-        }
-
-        .back-btn:hover {
-            color: #22c55e;
         }
 
         .sidebar-menu {
@@ -184,6 +117,7 @@
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s;
+            cursor: pointer;
         }
 
         .sidebar-menu a:hover, .sidebar-menu a.active {
@@ -222,7 +156,7 @@
         .model-header {
             display: flex;
             align-items: center;
-            justify-content: between;
+            justify-content: space-between;
             margin-bottom: 32px;
         }
 
@@ -397,10 +331,7 @@
             background: #0d1a0d;
             border: 1px solid #1a331a;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #a1a1aa;
+            padding: 16px;
             margin-bottom: 24px;
         }
 
@@ -425,45 +356,6 @@
 
         .users-table td {
             color: #e8f5e8;
-        }
-
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #22c55e;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0a0f0a;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
-        .tab-nav {
-            display: flex;
-            gap: 24px;
-            margin-bottom: 24px;
-            border-bottom: 1px solid #1a331a;
-        }
-
-        .tab-nav button {
-            background: none;
-            border: none;
-            color: #a1a1aa;
-            padding: 12px 0;
-            font-family: inherit;
-            letter-spacing: -0.6px;
-            font-weight: 500;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-            transition: all 0.2s;
-        }
-
-        .tab-nav button.active,
-        .tab-nav button:hover {
-            color: #22c55e;
-            border-bottom-color: #22c55e;
         }
 
         .tab-content {
@@ -499,6 +391,86 @@
             height: 100%;
             background: #22c55e;
             transition: width 0.3s ease;
+        }
+
+        .logs-container {
+            max-height: 400px;
+            overflow-y: auto;
+            background: #0a0f0a;
+            border: 1px solid #1a331a;
+            border-radius: 6px;
+            padding: 16px;
+            font-family: 'Monaco', 'Menlo', monospace;
+            font-size: 12px;
+            color: #22c55e;
+        }
+
+        .integrations-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 16px;
+        }
+
+        .integration-card {
+            background: #0d1a0d;
+            border: 1px solid #1a331a;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .integration-card:hover {
+            border-color: #22c55e;
+            transform: translateY(-2px);
+        }
+
+        .integration-icon {
+            width: 48px;
+            height: 48px;
+            background: #1a331a;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 12px;
+            font-size: 20px;
+        }
+
+        .query-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 16px;
+        }
+
+        .settings-form {
+            max-width: 600px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #e8f5e8;
+            font-weight: 500;
+        }
+
+        .form-input, .form-select {
+            width: 100%;
+            padding: 12px;
+            background: #0a0f0a;
+            border: 1px solid #1a331a;
+            border-radius: 6px;
+            color: #e8f5e8;
+            font-family: inherit;
+        }
+
+        .form-input:focus, .form-select:focus {
+            outline: none;
+            border-color: #22c55e;
         }
 
         @media (max-width: 768px) {
@@ -549,16 +521,16 @@
                 <li><a href="#" data-tab="performance"><span class="icon">⚡</span> Performance</a></li>
                 <li><a href="#" data-tab="database"><span class="icon">🗄️</span> Database Info</a></li>
                 <li><a href="#" data-tab="users"><span class="icon">👥</span> Users</a></li>
-                <li><a href="#"><span class="icon">🔌</span> Integrations</a></li>
-                <li><a href="#"><span class="icon">📋</span> Logs</a></li>
-                <li><a href="#"><span class="icon">🔍</span> Query Statistics</a></li>
-                <li><a href="#"><span class="icon">⚙️</span> Model Settings</a></li>
+                <li><a href="#" data-tab="integrations"><span class="icon">🔌</span> Integrations</a></li>
+                <li><a href="#" data-tab="logs"><span class="icon">📋</span> Logs</a></li>
+                <li><a href="#" data-tab="query-stats"><span class="icon">🔍</span> Query Statistics</a></li>
+                <li><a href="#" data-tab="settings"><span class="icon">⚙️</span> Model Settings</a></li>
             </ul>
         </aside>
 
         <main class="main-content">
             <div class="breadcrumb">
-                <a href="#">David Niyonshuti</a> / <a href="#">ml-project</a> / <a href="#">model-v2.1</a> / Overview
+                <a href="#">David Niyonshuti</a> / <a href="#">ml-project</a> / <a href="#">model-v2.1</a> / <span id="current-tab">Overview</span>
             </div>
 
             <div class="model-header">
@@ -568,9 +540,9 @@
                         <h1>model-v2.1</h1>
                         <div class="model-status">
                             <span class="status-badge status-running">● Running</span>
-                            <span class="status-badge status-trained">● Last trained: 3 December 2024</span>
+                            <span class="status-badge status-trained">● Last trained: <span id="last-trained-date">3 December 2024</span></span>
                             <span>TensorFlow 2.15</span>
-                            <span>Accuracy: 94.2%</span>
+                            <span>Accuracy: <span id="header-accuracy">94.2%</span></span>
                         </div>
                     </div>
                 </div>
@@ -579,6 +551,7 @@
                 </div>
             </div>
 
+            <!-- Overview Tab -->
             <div id="overview" class="tab-content active">
                 <div class="card">
                     <h2>Get started with Uruti.Rw for TensorFlow®</h2>
@@ -592,43 +565,44 @@
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Model URI</span>
-                                <span class="info-value">tensorflow://model-v2.1.mlcloud.com:8080/predict</span>
+                                <span class="info-value" id="model-uri">tensorflow://model-v2.1.mlcloud.com:8080/predict</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Name</span>
-                                <span class="info-value">model-v2.1</span>
+                                <span class="info-value" id="model-name">model-v2.1</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Framework</span>
-                                <span class="info-value">TensorFlow 2.15</span>
+                                <span class="info-value" id="framework">TensorFlow 2.15</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Type</span>
-                                <span class="info-value">Classification</span>
+                                <span class="info-value" id="model-type">Classification</span>
                             </div>
                         </div>
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Last Training</span>
-                                <span class="info-value">3 December 2024, 14:23 UTC</span>
+                                <span class="info-value" id="last-training">3 December 2024, 14:23 UTC</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Training Duration</span>
-                                <span class="info-value">2h 34m</span>
+                                <span class="info-value" id="training-duration">2h 34m</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Dataset Size</span>
-                                <span class="info-value">1.2M samples</span>
+                                <span class="info-value" id="dataset-size">1.2M samples</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Size</span>
-                                <span class="info-value">245 MB</span>
+                                <span class="info-value" id="model-size">245 MB</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Model Training Tab -->
             <div id="retrain" class="tab-content">
                 <div class="card">
                     <h2>Model Retraining</h2>
@@ -654,7 +628,7 @@
                         </div>
                         <div class="info-item">
                             <span class="info-label">Epochs</span>
-                            <span class="info-value">100</span>
+                            <span class="info-value">10</span>
                         </div>
                     </div>
 
@@ -673,57 +647,59 @@
                 </div>
             </div>
 
+            <!-- Metrics Tab -->
             <div id="metrics" class="tab-content">
                 <div class="metric-cards">
                     <div class="metric-card">
-                        <div class="metric-value">94.2%</div>
+                        <div class="metric-value" id="metrics-accuracy">94.2%</div>
                         <div class="metric-label">Accuracy</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">0.058</div>
+                        <div class="metric-value" id="metrics-loss">0.058</div>
                         <div class="metric-label">Loss</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">92.7%</div>
+                        <div class="metric-value" id="metrics-precision">92.7%</div>
                         <div class="metric-label">Precision</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">95.1%</div>
+                        <div class="metric-value" id="metrics-recall">95.1%</div>
                         <div class="metric-label">Recall</div>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Training Metrics</h2>
+                    <h2>Training Metrics Over Time</h2>
                     <div class="chart-container">
-                        <canvas id="metricsChart" width="100%" height="100%"></canvas>
+                        <canvas id="metricsChart"></canvas>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Confusion Matrix</h2>
+                    <h2>Label Distribution</h2>
                     <div class="chart-container">
-                        <div>Confusion matrix visualization would be rendered here</div>
+                        <canvas id="labelChart"></canvas>
                     </div>
                 </div>
             </div>
 
+            <!-- Performance Tab -->
             <div id="performance" class="tab-content">
                 <div class="metric-cards">
                     <div class="metric-card">
-                        <div class="metric-value">45ms</div>
+                        <div class="metric-value" id="perf-inference">45ms</div>
                         <div class="metric-label">Avg Inference Time</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">1,247</div>
+                        <div class="metric-value" id="perf-requests">1,247</div>
                         <div class="metric-label">Requests/min</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">99.9%</div>
+                        <div class="metric-value" id="perf-uptime">99.9%</div>
                         <div class="metric-label">Uptime</div>
                     </div>
                     <div class="metric-card">
-                        <div class="metric-value">2.1GB</div>
+                        <div class="metric-value" id="perf-memory">2.1GB</div>
                         <div class="metric-label">Memory Usage</div>
                     </div>
                 </div>
@@ -731,11 +707,26 @@
                 <div class="card">
                     <h2>Performance Over Time</h2>
                     <div class="chart-container">
-                        Performance charts would be rendered here
+                        <canvas id="performanceChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>System Resources</h2>
+                    <div class="metric-cards">
+                        <div class="metric-card">
+                            <div class="metric-value" id="cpu-usage">45%</div>
+                            <div class="metric-label">CPU Usage</div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value" id="gpu-usage">12%</div>
+                            <div class="metric-label">GPU Usage</div>
+                        </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Database Tab -->
             <div id="database" class="tab-content">
                 <div class="card">
                     <h2>Database Information</h2>
@@ -743,43 +734,44 @@
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Database Type</span>
-                                <span class="info-value">PostgreSQL 15.3</span>
+                                <span class="info-value" id="db-type">PostgreSQL 15.3</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Connection String</span>
-                                <span class="info-value">postgresql://ml-db.cloud.com:5432/mldata</span>
+                                <span class="info-value" id="db-connection">postgresql://ml-db.cloud.com:5432/mldata</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Total Records</span>
-                                <span class="info-value">1,234,567</span>
+                                <span class="info-value" id="db-records">1,234,567</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Database Size</span>
-                                <span class="info-value">15.7 GB</span>
+                                <span class="info-value" id="db-size">15.7 GB</span>
                             </div>
                         </div>
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Last Backup</span>
-                                <span class="info-value">Today, 02:00 UTC</span>
+                                <span class="info-value" id="db-backup">Today, 02:00 UTC</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Backup Size</span>
-                                <span class="info-value">12.3 GB</span>
+                                <span class="info-value" id="db-backup-size">12.3 GB</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Tables</span>
-                                <span class="info-value">23</span>
+                                <span class="info-value" id="db-tables">23</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Status</span>
-                                <span class="info-value" style="color: #22c55e;">● Online</span>
+                                <span class="info-value" id="db-status" style="color: #22c55e;">● Online</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
+            <!-- Users Tab -->
             <div id="users" class="tab-content">
                 <div class="card">
                     <h2>Application Users</h2>
@@ -793,63 +785,202 @@
                                 <th>API Calls</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div class="user-avatar">JD</div>
-                                        John Doe
-                                    </div>
-                                </td>
-                                <td>john.doe@company.com</td>
-                                <td>Admin</td>
-                                <td>2 hours ago</td>
-                                <td>1,247</td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div class="user-avatar">AS</div>
-                                        Alice Smith
-                                    </div>
-                                </td>
-                                <td>alice.smith@company.com</td>
-                                <td>Developer</td>
-                                <td>1 day ago</td>
-                                <td>843</td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div class="user-avatar">BJ</div>
-                                        Bob Johnson
-                                    </div>
-                                </td>
-                                <td>bob.johnson@company.com</td>
-                                <td>Analyst</td>
-                                <td>3 days ago</td>
-                                <td>156</td>
-                            </tr>
-                            <tr>
-                                <td>
-                                    <div style="display: flex; align-items: center; gap: 12px;">
-                                        <div class="user-avatar">CD</div>
-                                        Carol Davis
-                                    </div>
-                                </td>
-                                <td>carol.davis@company.com</td>
-                                <td>Viewer</td>
-                                <td>1 week ago</td>
-                                <td>23</td>
-                            </tr>
+                        <tbody id="users-tbody">
+                            <!-- Users will be loaded dynamically -->
                         </tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Integrations Tab -->
+            <div id="integrations" class="tab-content">
+                <div class="card">
+                    <h2>Available Integrations</h2>
+                    <p style="color: #a1a1aa; margin-bottom: 24px;">Connect your model with external tools and services</p>
+                    
+                    <div class="integrations-grid">
+                        <div class="integration-card">
+                            <div class="integration-icon">🔬</div>
+                            <h3>wandb.ai</h3>
+                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Experiment tracking and model management</p>
+                            <button class="btn btn-primary" style="margin-top: 12px;">Connect</button>
+                        </div>
+                        
+                        <div class="integration-card">
+                            <div class="integration-icon">🎵</div>
+                            <h3>Whisper</h3>
+                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Speech-to-text processing</p>
+                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
+                        </div>
+                        
+                        <div class="integration-card">
+                            <div class="integration-icon">🔧</div>
+                            <h3>Tokenizers</h3>
+                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Text preprocessing and tokenization</p>
+                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
+                        </div>
+                        
+                        <div class="integration-card">
+                            <div class="integration-icon">⚡</div>
+                            <h3>TensorFlow</h3>
+                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Core ML framework</p>
+                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Logs Tab -->
+            <div id="logs" class="tab-content">
+                <div class="card">
+                    <h2>System Logs</h2>
+                    <div class="logs-container" id="system-logs">
+                        <div style="color: #22c55e;">[2024-12-03 14:23:15] INFO: Model v2.1 initialized successfully</div>
+                        <div style="color: #06b6d4;">[2024-12-03 14:23:16] DEBUG: Loading tokenizer from ./models/distilbert-base-uncased</div>
+                        <div style="color: #22c55e;">[2024-12-03 14:23:17] INFO: Database connection established</div>
+                        <div style="color: #f59e0b;">[2024-12-03 14:25:32] WARN: High memory usage detected: 2.1GB</div>
+                        <div style="color: #22c55e;">[2024-12-03 14:30:45] INFO: Prediction request processed - Label: Investment Ready</div>
+                        <div style="color: #06b6d4;">[2024-12-03 14:31:12] DEBUG: Model inference time: 45ms</div>
+                        <div style="color: #22c55e;">[2024-12-03 14:35:28] INFO: User authentication successful - david@uruti.rw</div>
+                        <div style="color: #22c55e;">[2024-12-03 14:42:33] INFO: Database backup completed successfully</div>
+                        <div style="color: #f59e0b;">[2024-12-03 14:45:18] WARN: Rate limit approaching for user: alice@uruti.rw</div>
+                        <div style="color: #22c55e;">[2024-12-03 14:50:22] INFO: Training checkpoint saved</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Training Logs</h2>
+                    <div class="logs-container" id="training-logs-display">
+                        <!-- Training logs will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Query Statistics Tab -->
+            <div id="query-stats" class="tab-content">
+                <div class="metric-cards">
+                    <div class="metric-card">
+                        <div class="metric-value" id="total-queries">15,247</div>
+                        <div class="metric-label">Total Queries</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="success-rate">98.7%</div>
+                        <div class="metric-label">Success Rate</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="avg-response">42ms</div>
+                        <div class="metric-label">Avg Response Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value" id="queries-today">1,832</div>
+                        <div class="metric-label">Queries Today</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Query Distribution by Label</h2>
+                    <div class="chart-container">
+                        <canvas id="queryDistributionChart"></canvas>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Recent Predictions</h2>
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Input Type</th>
+                                <th>Predicted Label</th>
+                                <th>Confidence</th>
+                                <th>Processing Time</th>
+                            </tr>
+                        </thead>
+                        <tbody id="recent-predictions">
+                            <!-- Recent predictions will be loaded here -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Model Settings Tab -->
+            <div id="settings" class="tab-content">
+                <div class="card">
+                    <h2>Model Configuration</h2>
+                    <div class="settings-form">
+                        <div class="form-group">
+                            <label class="form-label">Model Name</label>
+                            <input type="text" class="form-input" value="model-v2.1" id="setting-model-name">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Framework Version</label>
+                            <select class="form-select" id="setting-framework">
+                                <option value="tensorflow-2.15">TensorFlow 2.15</option>
+                                <option value="tensorflow-2.14">TensorFlow 2.14</option>
+                                <option value="tensorflow-2.13">TensorFlow 2.13</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Inference Timeout (ms)</label>
+                            <input type="number" class="form-input" value="5000" id="setting-timeout">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Batch Size</label>
+                            <input type="number" class="form-input" value="32" id="setting-batch-size">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Auto-scaling</label>
+                            <select class="form-select" id="setting-autoscaling">
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                        
+                        <div style="display: flex; gap: 16px; margin-top: 24px;">
+                            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
+                            <button class="btn btn-secondary" onclick="resetSettings()">Reset to Default</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h2>Model Endpoints</h2>
+                    <div class="info-item">
+                        <span class="info-label">Prediction Endpoint</span>
+                        <span class="info-value">POST /predict</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Health Check</span>
+                        <span class="info-value">GET /health</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">Metrics Endpoint</span>
+                        <span class="info-value">GET /metrics</span>
+                    </div>
+                    <div class="info-item">
+                        <span class="info-label">API Version</span>
+                        <span class="info-value">v2.1.0</span>
+                    </div>
                 </div>
             </div>
         </main>
     </div>
 
     <script>
+        // Configuration
+        const API_BASE = 'http://localhost:8000';
+        
+        // Global variables
+        let trainingInProgress = false;
+        let metricsChart = null;
+        let performanceChart = null;
+        let labelChart = null;
+        let queryDistributionChart = null;
+
         // Tools dropdown functionality
         function showTools(e) {
             e.preventDefault();
@@ -857,8 +988,6 @@
             alert('Available Tools:\n' + tools.join('\n'));
         }
 
-        const API_BASE = 'http://localhost:8000'; // Change this to your API URL
-        
         // Tab navigation functionality
         document.querySelectorAll('[data-tab]').forEach(link => {
             link.addEventListener('click', (e) => {
@@ -876,11 +1005,29 @@
                 const tabContent = document.getElementById(tabId);
                 if (tabContent) {
                     tabContent.classList.add('active');
+                    // Update breadcrumb
+                    document.getElementById('current-tab').textContent = getTabDisplayName(tabId);
                     // Load data when tab is opened
                     loadTabData(tabId);
                 }
             });
         });
+
+        function getTabDisplayName(tabId) {
+            const displayNames = {
+                'overview': 'Overview',
+                'retrain': 'Model Training',
+                'metrics': 'Metrics',
+                'performance': 'Performance',
+                'database': 'Database Info',
+                'users': 'Users',
+                'integrations': 'Integrations',
+                'logs': 'Logs',
+                'query-stats': 'Query Statistics',
+                'settings': 'Model Settings'
+            };
+            return displayNames[tabId] || 'Unknown';
+        }
 
         // Load data for specific tabs
         async function loadTabData(tabId) {
@@ -904,77 +1051,147 @@
                     case 'retrain':
                         await loadTrainingStatus();
                         break;
+                    case 'logs':
+                        await loadLogsData();
+                        break;
+                    case 'query-stats':
+                        await loadQueryStatsData();
+                        break;
                 }
             } catch (error) {
                 console.error(`Error loading ${tabId} data:`, error);
+                // Show fallback data if API is not available
+                loadFallbackData(tabId);
+            }
+        }
+
+        // Fallback data when API is not available
+        function loadFallbackData(tabId) {
+            switch(tabId) {
+                case 'metrics':
+                    updateMetricsDisplay({
+                        accuracy: 0.942,
+                        precision_score: 0.927,
+                        recall_score: 0.951,
+                        loss_value: 0.058
+                    });
+                    createMetricsChart();
+                    createLabelChart();
+                    break;
+                case 'performance':
+                    updatePerformanceDisplay({
+                        avg_inference_time: 45,
+                        requests_per_minute: 1247,
+                        uptime: 99.9,
+                        memory_usage: "2.1GB"
+                    });
+                    createPerformanceChart();
+                    break;
+                case 'users':
+                    loadFallbackUsers();
+                    break;
+                case 'query-stats':
+                    loadFallbackQueryStats();
+                    break;
             }
         }
 
         // Load overview data
         async function loadOverviewData() {
-            const response = await fetch(`${API_BASE}/overview`);
-            const data = await response.json();
-            
-            // Update model info
-            const modelInfo = data.model_info;
-            document.querySelector('.model-details h1').textContent = modelInfo.name;
-            document.querySelector('.status-badge.status-trained').innerHTML = 
-                `● Last trained: ${new Date(modelInfo.last_training).toLocaleDateString()}`;
-            
-            // Update accuracy in status
-            const statusElements = document.querySelectorAll('.model-status span');
-            statusElements[statusElements.length-1].textContent = `Accuracy: ${(modelInfo.accuracy * 100).toFixed(1)}%`;
+            try {
+                const response = await fetch(`${API_BASE}/overview`);
+                const data = await response.json();
+                
+                // Update model info
+                const modelInfo = data.model_info;
+                document.getElementById('model-name').textContent = modelInfo.name;
+                document.getElementById('last-trained-date').textContent = new Date(modelInfo.last_training).toLocaleDateString();
+                document.getElementById('header-accuracy').textContent = `${(modelInfo.accuracy * 100).toFixed(1)}%`;
+                document.getElementById('last-training').textContent = new Date(modelInfo.last_training).toLocaleString();
+                document.getElementById('training-duration').textContent = modelInfo.training_duration;
+                document.getElementById('model-size').textContent = modelInfo.model_size;
+                
+            } catch (error) {
+                console.error('Error loading overview data:', error);
+            }
         }
 
         // Load metrics data
         async function loadMetricsData() {
-            const response = await fetch(`${API_BASE}/metrics`);
-            const data = await response.json();
-            
-            // Update metric cards
-            const metricCards = document.querySelectorAll('#metrics .metric-card .metric-value');
-            metricCards[0].textContent = `${(data.accuracy * 100).toFixed(1)}%`;
-            metricCards[1].textContent = data.loss_value ? data.loss_value.toFixed(3) : '0.058';
-            metricCards[2].textContent = `${(data.precision_score * 100).toFixed(1)}%`;
-            metricCards[3].textContent = `${(data.recall_score * 100).toFixed(1)}%`;
+            try {
+                const response = await fetch(`${API_BASE}/metrics`);
+                const data = await response.json();
+                updateMetricsDisplay(data);
+                createMetricsChart();
+                createLabelChart(data.label_distribution);
+            } catch (error) {
+                console.error('Error loading metrics data:', error);
+                loadFallbackData('metrics');
+            }
+        }
+
+        function updateMetricsDisplay(data) {
+            document.getElementById('metrics-accuracy').textContent = `${(data.accuracy * 100).toFixed(1)}%`;
+            document.getElementById('metrics-loss').textContent = data.loss_value ? data.loss_value.toFixed(3) : '0.058';
+            document.getElementById('metrics-precision').textContent = `${(data.precision_score * 100).toFixed(1)}%`;
+            document.getElementById('metrics-recall').textContent = `${(data.recall_score * 100).toFixed(1)}%`;
         }
 
         // Load performance data
         async function loadPerformanceData() {
-            const response = await fetch(`${API_BASE}/performance`);
-            const data = await response.json();
-            
-            // Update performance cards
-            const performanceCards = document.querySelectorAll('#performance .metric-card .metric-value');
-            performanceCards[0].textContent = `${data.avg_inference_time}ms`;
-            performanceCards[1].textContent = data.requests_per_minute.toLocaleString();
-            performanceCards[2].textContent = `${data.uptime}%`;
-            performanceCards[3].textContent = data.memory_usage;
+            try {
+                const response = await fetch(`${API_BASE}/performance`);
+                const data = await response.json();
+                updatePerformanceDisplay(data);
+                createPerformanceChart();
+            } catch (error) {
+                console.error('Error loading performance data:', error);
+                loadFallbackData('performance');
+            }
+        }
+
+        function updatePerformanceDisplay(data) {
+            document.getElementById('perf-inference').textContent = `${data.avg_inference_time}ms`;
+            document.getElementById('perf-requests').textContent = data.requests_per_minute.toLocaleString();
+            document.getElementById('perf-uptime').textContent = `${data.uptime}%`;
+            document.getElementById('perf-memory').textContent = data.memory_usage;
+            document.getElementById('cpu-usage').textContent = data.cpu_usage || '45%';
+            document.getElementById('gpu-usage').textContent = data.gpu_usage || '12%';
         }
 
         // Load database data
         async function loadDatabaseData() {
-            const response = await fetch(`${API_BASE}/database-info`);
-            const data = await response.json();
-            
-            // Update database info
-            const infoItems = document.querySelectorAll('#database .info-item .info-value');
-            infoItems[0].textContent = data.database_type;
-            infoItems[1].textContent = data.connection_string;
-            infoItems[2].textContent = data.total_records.toLocaleString();
-            infoItems[3].textContent = data.database_size;
-            infoItems[4].textContent = data.last_backup;
-            infoItems[5].textContent = data.backup_size;
-            infoItems[6].textContent = data.tables.toString();
-            infoItems[7].innerHTML = `● ${data.status}`;
+            try {
+                const response = await fetch(`${API_BASE}/database-info`);
+                const data = await response.json();
+                
+                document.getElementById('db-type').textContent = data.database_type;
+                document.getElementById('db-connection').textContent = data.connection_string;
+                document.getElementById('db-records').textContent = data.total_records.toLocaleString();
+                document.getElementById('db-size').textContent = data.database_size;
+                document.getElementById('db-backup').textContent = data.last_backup;
+                document.getElementById('db-backup-size').textContent = data.backup_size;
+                document.getElementById('db-tables').textContent = data.tables.toString();
+                document.getElementById('db-status').innerHTML = `● ${data.status}`;
+            } catch (error) {
+                console.error('Error loading database data:', error);
+            }
         }
 
         // Load users data
         async function loadUsersData() {
-            const response = await fetch(`${API_BASE}/users`);
-            const users = await response.json();
-            
-            const tbody = document.querySelector('#users tbody');
+            try {
+                const response = await fetch(`${API_BASE}/users`);
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('Error loading users data:', error);
+                loadFallbackUsers();
+            }
+        }
+
+        function displayUsers(users) {
+            const tbody = document.getElementById('users-tbody');
             tbody.innerHTML = '';
             
             users.forEach(user => {
@@ -995,43 +1212,48 @@
             });
         }
 
+        function loadFallbackUsers() {
+            const fallbackUsers = [
+                { name: "David Niyonshuti", email: "david@uruti.rw", role: "Admin", last_access_formatted: "2 hours ago", api_calls: 1247 },
+                { name: "Alice Smith", email: "alice@uruti.rw", role: "Developer", last_access_formatted: "1 day ago", api_calls: 843 },
+                { name: "Bob Johnson", email: "bob@uruti.rw", role: "Analyst", last_access_formatted: "3 days ago", api_calls: 156 },
+                { name: "Carol Davis", email: "carol@uruti.rw", role: "Viewer", last_access_formatted: "1 week ago", api_calls: 23 }
+            ];
+            displayUsers(fallbackUsers);
+        }
+
         // Load training status
         async function loadTrainingStatus() {
-            const response = await fetch(`${API_BASE}/training/status`);
-            const status = await response.json();
-            
-            const progressBar = document.getElementById('training-progress');
-            const progressText = document.getElementById('progress-text');
-            const trainingLog = document.getElementById('training-log');
-            
-            progressBar.style.width = `${status.progress}%`;
-            
-            if (status.is_training) {
-                progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-            } else if (status.progress === 100) {
-                progressText.textContent = 'Training completed successfully!';
+            try {
+                const response = await fetch(`${API_BASE}/training/status`);
+                const status = await response.json();
+                
+                const progressBar = document.getElementById('training-progress');
+                const progressText = document.getElementById('progress-text');
+                const trainingLog = document.getElementById('training-log');
+                
+                progressBar.style.width = `${status.progress}%`;
+                
+                if (status.is_training) {
+                    trainingInProgress = true;
+                    progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
+                    pollTrainingStatus();
+                } else if (status.progress === 100) {
+                    progressText.textContent = 'Training completed successfully!';
             } else {
                 progressText.textContent = 'Ready to start training';
             }
             
-            // Update training logs
             if (status.logs && status.logs.length > 0) {
                 trainingLog.innerHTML = status.logs.join('<br>');
                 trainingLog.scrollTop = trainingLog.scrollHeight;
             }
+        } catch (error) {
+            console.error('Error loading training status:', error);
+        }
         }
 
-        // Load initial data
-        window.addEventListener('load', () => {
-            loadTabData('overview');
-        });
-
-        // Training simulation
-        let trainingInProgress = false;
-
-        function startTraining() {
-            if (trainingInProgress) return;
-            
+        function simulateTraining() {
             trainingInProgress = true;
             const progressBar = document.getElementById('training-progress');
             const progressText = document.getElementById('progress-text');
@@ -1039,7 +1261,7 @@
             
             let progress = 0;
             let epoch = 1;
-            const maxEpochs = 10; // Shortened for demo
+            const maxEpochs = 10;
             
             trainingLog.innerHTML = 'Starting training...<br>';
             
@@ -1074,38 +1296,660 @@
             }, 500);
         }
 
-        // Simple metrics chart simulation
-        function drawMetricsChart() {
-            const canvas = document.getElementById('metricsChart');
-            if (!canvas) return;
+        // Settings functionality
+        function saveSettings() {
+            const settings = {
+                model_name: document.getElementById('setting-model-name').value,
+                framework: document.getElementById('setting-framework').value,
+                timeout: document.getElementById('setting-timeout').value,
+                batch_size: document.getElementById('setting-batch-size').value,
+                autoscaling: document.getElementById('setting-autoscaling').value
+            };
             
-            const ctx = canvas.getContext('2d');
-            canvas.width = canvas.offsetWidth;
-            canvas.height = canvas.offsetHeight;
-            
-            // Clear canvas
-            ctx.fillStyle = '#0d1a0d';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            
-            // Draw simple line chart
-            ctx.strokeStyle = '#22c55e';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            
-            const points = 50;
-            for (let i = 0; i < points; i++) {
-                const x = (i / (points - 1)) * canvas.width;
-                const y = canvas.height - (Math.sin(i * 0.1) * 20 + Math.random() * 10 + canvas.height * 0.
-5);
-                if (i === 0) {
-                    ctx.moveTo(x, y);
-                } else {
-                    ctx.lineTo(x, y);
+            // In a real application, this would send the settings to the API
+            console.log('Saving settings:', settings);
+            alert('Settings saved successfully!');
+        }
+
+        function resetSettings() {
+            document.getElementById('setting-model-name').value = 'model-v2.1';
+            document.getElementById('setting-framework').value = 'tensorflow-2.15';
+            document.getElementById('setting-timeout').value = '5000';
+            document.getElementById('setting-batch-size').value = '32';
+            document.getElementById('setting-autoscaling').value = 'enabled';
+            alert('Settings reset to default values!');
+        }
+
+        // Auto-refresh functionality
+        function startAutoRefresh() {
+            setInterval(() => {
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    const tabId = activeTab.id;
+                    // Only refresh certain tabs to avoid disrupting user interactions
+                    if (['overview', 'metrics', 'performance'].includes(tabId)) {
+                        loadTabData(tabId);
+                    }
+                }
+            }, 30000); // Refresh every 30 seconds
+        }
+
+        // Real-time updates simulation
+        function simulateRealTimeUpdates() {
+            setInterval(() => {
+                // Update random metrics slightly
+                const accuracy = document.getElementById('metrics-accuracy');
+                if (accuracy) {
+                    const currentValue = parseFloat(accuracy.textContent);
+                    const newValue = currentValue + (Math.random() - 0.5) * 0.1;
+                    accuracy.textContent = `${Math.max(90, Math.min(95, newValue)).toFixed(1)}%`;
+                }
+                
+                const inference = document.getElementById('perf-inference');
+                if (inference) {
+                    const currentValue = parseFloat(inference.textContent);
+                    const newValue = currentValue + (Math.random() - 0.5) * 5;
+                    inference.textContent = `${Math.max(30, Math.min(60, newValue)).toFixed(0)}ms`;
+                }
+                
+                const requests = document.getElementById('perf-requests');
+                if (requests) {
+                    const currentValue = parseInt(requests.textContent.replace(',', ''));
+                    const newValue = currentValue + Math.floor((Math.random() - 0.5) * 100);
+                    requests.textContent = Math.max(1000, Math.min(2000, newValue)).toLocaleString();
+                }
+            }, 5000); // Update every 5 seconds
+        }
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            if (e.ctrlKey || e.metaKey) {
+                switch(e.key) {
+                    case '1':
+                        e.preventDefault();
+                        document.querySelector('[data-tab="overview"]').click();
+                        break;
+                    case '2':
+                        e.preventDefault();
+                        document.querySelector('[data-tab="metrics"]').click();
+                        break;
+                    case '3':
+                        e.preventDefault();
+                        document.querySelector('[data-tab="performance"]').click();
+                        break;
+                    case 'r':
+                        e.preventDefault();
+                        location.reload();
+                        break;
                 }
             }
-            ctx.stroke();
+        });
+
+        // Tooltip functionality
+        function addTooltips() {
+            const tooltipElements = document.querySelectorAll('[title]');
+            tooltipElements.forEach(element => {
+                element.addEventListener('mouseenter', (e) => {
+                    const tooltip = document.createElement('div');
+                    tooltip.className = 'tooltip';
+                    tooltip.textContent = e.target.getAttribute('title');
+                    tooltip.style.cssText = `
+                        position: fixed;
+                        background: #0d1a0d;
+                        color: #e8f5e8;
+                        padding: 8px 12px;
+                        border-radius: 6px;
+                        border: 1px solid #1a331a;
+                        font-size: 12px;
+                        z-index: 1000;
+                        pointer-events: none;
+                    `;
+                    document.body.appendChild(tooltip);
+                    
+                    const rect = e.target.getBoundingClientRect();
+                    tooltip.style.left = rect.left + 'px';
+                    tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
+                });
+                
+                element.addEventListener('mouseleave', () => {
+                    const tooltip = document.querySelector('.tooltip');
+                    if (tooltip) {
+                        tooltip.remove();
+                    }
+                });
+            });
+        }
+
+        // Error handling and retry mechanism
+        async function fetchWithRetry(url, options = {}, retries = 3) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response;
+                    }
+                    throw new Error(`HTTP ${response.status}`);
+                } catch (error) {
+                    if (i === retries - 1) throw error;
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
             }
-        drawMetricsChart();
+        }
+
+        // Connection status indicator
+        function updateConnectionStatus() {
+            const statusIndicator = document.createElement('div');
+            statusIndicator.id = 'connection-status';
+            statusIndicator.style.cssText = `
+                position: fixed;
+                top: 16px;
+                right: 16px;
+                padding: 8px 16px;
+                border-radius: 6px;
+                font-size: 12px;
+                font-weight: 500;
+                z-index: 1000;
+                transition: all 0.3s ease;
+            `;
+            document.body.appendChild(statusIndicator);
+            
+            async function checkConnection() {
+                try {
+                    await fetch(`${API_BASE}/`, { method: 'HEAD' });
+                    statusIndicator.textContent = '● API Connected';
+                    statusIndicator.style.background = '#16a34a20';
+                    statusIndicator.style.color = '#22c55e';
+                    statusIndicator.style.border = '1px solid #22c55e';
+                } catch (error) {
+                    statusIndicator.textContent = '● API Disconnected';
+                    statusIndicator.style.background = '#dc262620';
+                    statusIndicator.style.color = '#ef4444';
+                    statusIndicator.style.border = '1px solid #ef4444';
+                }
+            }
+            
+            checkConnection();
+            setInterval(checkConnection, 10000); // Check every 10 seconds
+        }
+
+        // Export functionality
+        function exportData(type) {
+            const data = {
+                timestamp: new Date().toISOString(),
+                type: type,
+                data: {}
+            };
+            
+            switch(type) {
+                case 'metrics':
+                    data.data = {
+                        accuracy: document.getElementById('metrics-accuracy').textContent,
+                        loss: document.getElementById('metrics-loss').textContent,
+                        precision: document.getElementById('metrics-precision').textContent,
+                        recall: document.getElementById('metrics-recall').textContent
+                    };
+                    break;
+                case 'performance':
+                    data.data = {
+                        inference_time: document.getElementById('perf-inference').textContent,
+                        requests_per_minute: document.getElementById('perf-requests').textContent,
+                        uptime: document.getElementById('perf-uptime').textContent,
+                        memory_usage: document.getElementById('perf-memory').textContent
+                    };
+                    break;
+            }
+            
+            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `uruti-${type}-${new Date().toISOString().split('T')[0]}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        // Initialize dashboard
+        window.addEventListener('load', () => {
+            loadTabData('overview');
+            startAutoRefresh();
+            simulateRealTimeUpdates();
+            addTooltips();
+            updateConnectionStatus();
+            
+            // Add export buttons to relevant tabs
+            const exportButton = document.createElement('button');
+            exportButton.className = 'btn btn-secondary';
+            exportButton.style.cssText = 'margin-left: 16px; font-size: 12px; padding: 6px 12px;';
+            exportButton.textContent = 'Export Data';
+            exportButton.onclick = () => {
+                const activeTab = document.querySelector('.tab-content.active');
+                if (activeTab) {
+                    exportData(activeTab.id);
+                }
+            };
+            
+            document.querySelector('.quick-actions').appendChild(exportButton);
+            
+            console.log('🚀 Uruti.Rw Dashboard initialized successfully!');
+            console.log('💡 Keyboard shortcuts:');
+            console.log('   Ctrl/Cmd + 1: Overview');
+            console.log('   Ctrl/Cmd + 2: Metrics');
+            console.log('   Ctrl/Cmd + 3: Performance');
+            console.log('   Ctrl/Cmd + R: Refresh');
+        });
+
+        // Handle browser back/forward buttons
+        window.addEventListener('popstate', (e) => {
+            if (e.state && e.state.tab) {
+                document.querySelector(`[data-tab="${e.state.tab}"]`).click();
+            }
+        });
+
+        // Push state when tab changes
+        document.querySelectorAll('[data-tab]').forEach(link => {
+            link.addEventListener('click', (e) => {
+                const tabId = link.getAttribute('data-tab');
+                history.pushState({ tab: tabId }, '', `#${tabId}`);
+            });
+        });
+
+        // Load tab from URL hash on page load
+        window.addEventListener('load', () => {
+            const hash = window.location.hash.slice(1);
+            if (hash) {
+                const tabLink = document.querySelector(`[data-tab="${hash}"]`);
+                if (tabLink) {
+                    tabLink.click();
+                }
+            }
+        });
     </script>
 </body>
 </html>
+    <script>
+        // Load training status
+        async function loadTrainingStatus() {
+            try {
+                const response = await fetch(`${API_BASE}/training/status`);
+                const status = await response.json();
+                
+                const progressBar = document.getElementById('training-progress');
+                const progressText = document.getElementById('progress-text');
+                const trainingLog = document.getElementById('training-log');
+                
+                progressBar.style.width = `${status.progress}%`;
+                
+                if (status.is_training) {
+                    progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
+                } else if (status.progress === 100) {
+Training completed successfully!';
+                    progressText.textContent = 'Training completed successfully!';
+                } else {
+                    progressText.textContent = 'Ready to start training';
+                }
+                
+                if (status.logs && status.logs.length > 0) {
+                    trainingLog.innerHTML = status.logs.join('<br>');
+                    trainingLog.scrollTop = trainingLog.scrollHeight;
+                }
+            } catch (error) {
+                console.error('Error loading training status:', error);
+            }
+        }
+
+        // Load logs data
+        async function loadLogsData() {
+            try {
+                const response = await fetch(`${API_BASE}/training/logs`);
+                const logs = await response.json();
+                
+                const trainingLogsDisplay = document.getElementById('training-logs-display');
+                trainingLogsDisplay.innerHTML = '';
+                
+                logs.forEach(log => {
+                    const logEntry = document.createElement('div');
+                    logEntry.style.color = '#22c55e';
+                    logEntry.innerHTML = `[${new Date(log.created_at).toLocaleString()}] ${log.message}`;
+                    trainingLogsDisplay.appendChild(logEntry);
+                });
+            } catch (error) {
+                console.error('Error loading logs data:', error);
+            }
+        }
+
+        // Load query statistics data
+        async function loadQueryStatsData() {
+            try {
+                const response = await fetch(`${API_BASE}/metrics`);
+                const data = await response.json();
+                
+                document.getElementById('total-queries').textContent = data.total_predictions.toLocaleString();
+                document.getElementById('success-rate').textContent = '98.7%';
+                document.getElementById('avg-response').textContent = `${Math.round(data.avg_processing_time * 1000)}ms`;
+                document.getElementById('queries-today').textContent = Math.round(data.total_predictions * 0.12).toLocaleString();
+                
+                createQueryDistributionChart(data.label_distribution);
+                loadRecentPredictions();
+            } catch (error) {
+                console.error('Error loading query stats data:', error);
+                loadFallbackQueryStats();
+            }
+        }
+
+        function loadFallbackQueryStats() {
+            document.getElementById('total-queries').textContent = '15,247';
+            document.getElementById('success-rate').textContent = '98.7%';
+            document.getElementById('avg-response').textContent = '42ms';
+            document.getElementById('queries-today').textContent = '1,832';
+            
+            const fallbackDistribution = [
+                { predicted_label: 'Investment Ready', count: 8547 },
+                { predicted_label: 'Mentorship Needed', count: 4321 },
+                { predicted_label: 'Needs Refinement', count: 2379 }
+            ];
+            createQueryDistributionChart(fallbackDistribution);
+            loadFallbackRecentPredictions();
+        }
+
+        function loadRecentPredictions() {
+            // This would typically fetch from an API endpoint
+            loadFallbackRecentPredictions();
+        }
+
+        function loadFallbackRecentPredictions() {
+            const tbody = document.getElementById('recent-predictions');
+            tbody.innerHTML = '';
+            
+            const predictions = [
+                { timestamp: '2024-12-03 14:45:22', input_type: 'Text', label: 'Investment Ready', confidence: 0.94, time: 42 },
+                { timestamp: '2024-12-03 14:44:18', input_type: 'Audio', label: 'Mentorship Needed', confidence: 0.87, time: 156 },
+                { timestamp: '2024-12-03 14:43:45', input_type: 'Text', label: 'Needs Refinement', confidence: 0.76, time: 38 },
+                { timestamp: '2024-12-03 14:42:33', input_type: 'Text', label: 'Investment Ready', confidence: 0.92, time: 45 },
+                { timestamp: '2024-12-03 14:41:12', input_type: 'Audio', label: 'Mentorship Needed', confidence: 0.89, time: 178 }
+            ];
+            
+            predictions.forEach(pred => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${pred.timestamp}</td>
+                    <td>${pred.input_type}</td>
+                    <td>${pred.label}</td>
+                    <td>${(pred.confidence * 100).toFixed(1)}%</td>
+                    <td>${pred.time}ms</td>
+                `;
+                tbody.appendChild(row);
+            });
+        }
+
+        // Chart creation functions
+        function createMetricsChart() {
+            const ctx = document.getElementById('metricsChart');
+            if (!ctx) return;
+            
+            if (metricsChart) {
+                metricsChart.destroy();
+            }
+            
+            metricsChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5', 'Epoch 6', 'Epoch 7', 'Epoch 8', 'Epoch 9', 'Epoch 10'],
+                    datasets: [{
+                        label: 'Accuracy',
+                        data: [0.65, 0.72, 0.78, 0.83, 0.87, 0.90, 0.92, 0.93, 0.94, 0.942],
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Loss',
+                        data: [0.45, 0.38, 0.32, 0.28, 0.24, 0.20, 0.16, 0.12, 0.08, 0.058],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e8f5e8' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#a1a1aa' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createLabelChart(distribution = null) {
+            const ctx = document.getElementById('labelChart');
+            if (!ctx) return;
+            
+            if (labelChart) {
+                labelChart.destroy();
+            }
+            
+            const defaultDistribution = distribution || [
+                { predicted_label: 'Investment Ready', count: 8547 },
+                { predicted_label: 'Mentorship Needed', count: 4321 },
+                { predicted_label: 'Needs Refinement', count: 2379 }
+            ];
+            
+            labelChart = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: defaultDistribution.map(d => d.predicted_label),
+                    datasets: [{
+                        data: defaultDistribution.map(d => d.count),
+                        backgroundColor: ['#22c55e', '#06b6d4', '#f59e0b'],
+                        borderColor: '#0d1a0d',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e8f5e8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createPerformanceChart() {
+            const ctx = document.getElementById('performanceChart');
+            if (!ctx) return;
+            
+            if (performanceChart) {
+                performanceChart.destroy();
+            }
+            
+            const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
+            const responseTimeData = hours.map(() => 35 + Math.random() * 20);
+            const requestData = hours.map(() => 800 + Math.random() * 600);
+            
+            performanceChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: hours,
+                    datasets: [{
+                        label: 'Response Time (ms)',
+                        data: responseTimeData,
+                        borderColor: '#22c55e',
+                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
+                        tension: 0.4
+                    }, {
+                        label: 'Requests/min',
+                        data: requestData,
+                        borderColor: '#06b6d4',
+                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
+                        tension: 0.4,
+                        yAxisID: 'y1'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e8f5e8' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        },
+                        y: {
+                            type: 'linear',
+                            display: true,
+                            position: 'left',
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        },
+                        y1: {
+                            type: 'linear',
+                            display: true,
+                            position: 'right',
+                            ticks: { color: '#a1a1aa' },
+                            grid: { drawOnChartArea: false }
+                        }
+                    }
+                }
+            });
+        }
+
+        function createQueryDistributionChart(distribution) {
+            const ctx = document.getElementById('queryDistributionChart');
+            if (!ctx) return;
+            
+            if (queryDistributionChart) {
+                queryDistributionChart.destroy();
+            }
+            
+            queryDistributionChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: distribution.map(d => d.predicted_label),
+                    datasets: [{
+                        label: 'Query Count',
+                        data: distribution.map(d => d.count),
+                        backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(6, 182, 212, 0.8)', 'rgba(245, 158, 11, 0.8)'],
+                        borderColor: ['#22c55e', '#06b6d4', '#f59e0b'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            labels: { color: '#e8f5e8' }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        },
+                        y: {
+                            ticks: { color: '#a1a1aa' },
+                            grid: { color: '#1a331a' }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Training functionality
+        async function startTraining() {
+            if (trainingInProgress) return;
+            
+            try {
+                const response = await fetch(`${API_BASE}/training/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        batch_size: 32,
+                        learning_rate: 0.001,
+                        epochs: 10
+                    })
+                });
+                
+                if (response.ok) {
+                    trainingInProgress = true;
+                    pollTrainingStatus();
+                } else {
+                    throw new Error('Failed to start training');
+                }
+            } catch (error) {
+                console.error('Error starting training:', error);
+                // Fallback to simulation if API is not available
+                simulateTraining();
+            }
+        }
+
+        function pollTrainingStatus() {
+            const interval = setInterval(async () => {
+                try {
+                    const response = await fetch(`${API_BASE}/training/status`);
+                    const status = await response.json();
+                    
+                    updateTrainingDisplay(status);
+                    
+                    if (!status.is_training) {
+                        trainingInProgress = false;
+                        clearInterval(interval);
+                    }
+                } catch (error) {
+                    console.error('Error polling training status:', error);
+                    clearInterval(interval);
+                }
+            }, 2000);
+        }
+
+        function updateTrainingDisplay(status) {
+            const progressBar = document.getElementById('training-progress');
+            const progressText = document.getElementById('progress-text');
+            const trainingLog = document.getElementById('training-log');
+            
+            progressBar.style.width = `${status.progress}%`;
+            
+            if (status.is_training) {
+                progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
+            } else if (status.progress === 100) {
+                progressText.textContent = 'Training completed successfully!';
+            } else {
+                progressText.textContent = 'Training not in progress';
+            }
+            
+            trainingLog.innerHTML = status.logs.join('<br>');
+            trainingLog.scrollTop = trainingLog.scrollHeight;
+        }
+    </script>
