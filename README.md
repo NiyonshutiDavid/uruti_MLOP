@@ -543,7 +543,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🎬 Demo Video
 
-**YouTube Demo**: [INSERT YOUTUBE LINK HERE]
+**YouTube Demo**: [[YOUTUBE AVAILABLE LINK HERE](https://youtu.be/eFr4CMAEWBs)]
 
 The demo video showcases:
 - Complete end-to-end user journey on mobile app
