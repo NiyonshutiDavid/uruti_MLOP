@@ -41,7 +41,7 @@ The platform leverages multiple state-of-the-art NLP models (DistilBERT, RoBERTa
 ## 🚀 Features
 
 ### Core ML Capabilities
-- **🎤 Audio Processing**: Real-time audio transcription using OpenAI Whisper
+- **🎤 Audio Processing**: Real-time audio transcription using OpenAI Whisper, the dataset used was downloaded from Mozilla, you can access dataset here:
 - **📝 Text Classification**: Multi-model ensemble (DistilBERT, RoBERTa, ALBERT, TensorFlow)
 - **🔄 Model Retraining**: Automated retraining pipeline with user data
 - **📊 Performance Monitoring**: Real-time metrics and model performance tracking with Weights & Biases integration
