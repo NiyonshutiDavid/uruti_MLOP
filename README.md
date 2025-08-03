@@ -239,7 +239,7 @@ The services will be available at:
 docker build -t uruti-app .
 
 # Run the container
-docker run -p 8000:8000 -p 5000:5000 uruti-mlops
+docker run -p 8000:8000 -p 5000:5000 uruti-app
 ```
 
 ---
