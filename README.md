@@ -41,7 +41,7 @@ The platform leverages multiple state-of-the-art NLP models (DistilBERT, RoBERTa
 ## 🚀 Features
 
 ### Core ML Capabilities
-- **🎤 Audio Processing**: Real-time audio transcription using OpenAI Whisper, the dataset used was downloaded from Mozilla, you can access dataset here:
+- **🎤 Audio Processing**: Real-time audio transcription using OpenAI Whisper, the dataset used was downloaded from Mozilla, you can access the dataset (here)[https://drive.google.com/file/d/10WzRvyyau2etuK08T835ndAfGH6y3Axf/view?usp=drive_link]
 - **📝 Text Classification**: Multi-model ensemble (DistilBERT, RoBERTa, ALBERT, TensorFlow)
 - **🔄 Model Retraining**: Automated retraining pipeline with user data
 - **📊 Performance Monitoring**: Real-time metrics and model performance tracking with Weights & Biases integration
@@ -221,15 +221,9 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 #### Start Flask Developer Dashboard
 ```bash
-python app.py
+python3 app.py
 ```
 
-#### Serve Web Frontend
-```bash
-cd uruti-web-app
-# Serve static files or use a local server
-python -m http.server 3000
-```
 
 The services will be available at:
 - **ML API**: http://localhost:8000
@@ -242,7 +236,7 @@ The services will be available at:
 #### Using Docker
 ```bash
 # Build the image
-docker build -t uruti-mlops .
+docker build -t uruti-app .
 
 # Run the container
 docker run -p 8000:8000 -p 5000:5000 uruti-mlops
@@ -253,24 +247,26 @@ docker run -p 8000:8000 -p 5000:5000 uruti-mlops
 ## 📱 Demo Screenshots
 
 ### Mobile Application (End Users)
-[INSERT MOBILE APP SCREENSHOTS HERE]
 
 *Screenshot 1: Mobile app home screen with audio recording interface for startup pitch submission*
+<img width="1206" height="2622" alt="simulator_screenshot_4079938B-7161-4CE8-8448-6C0290394FAA" src="https://github.com/user-attachments/assets/f2055fbf-b503-4977-89ae-2d91f1080ca6" />
+
 
 *Screenshot 2: Text input screen where users can type their startup ideas*
+<img width="1206" height="2622" alt="simulator_screenshot_6EF044CD-7C57-497A-8E36-78DBE0017B6B" src="https://github.com/user-attachments/assets/77cdb2c4-0bd6-414a-8fff-0c48b62d6006" />
 
 *Screenshot 3: Real-time prediction results showing classification and confidence scores*
+<img width="1206" height="2622" alt="simulator_screenshot_07A7BE38-CF8B-44D1-9B8E-DE82E20BD8BE" src="https://github.com/user-attachments/assets/b0e04fd2-54ef-4d77-9126-08909b75bba2" />
 
 *Screenshot 4: User history showing past pitch submissions and feedback*
+<img width="1206" height="2622" alt="simulator_screenshot_7FF3A098-A4D3-4181-A214-66E489C40C6D" src="https://github.com/user-attachments/assets/9e032869-a472-4bcb-908d-741d82508f6d" />
 
-### Web Dashboard (General Users)
-[INSERT WEB FRONTEND SCREENSHOTS HERE]
-
-*Screenshot 1: Web dashboard landing page with pitch submission interface*
 
 *Screenshot 2: Real-time prediction results display with category breakdown*
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 17 50 16" src="https://github.com/user-attachments/assets/89148ebb-a7b3-4efb-bafb-f830380eb64d" />
 
 *Screenshot 3: User analytics and submission history dashboard*
+<img width="1440" height="899" alt="Screenshot 2025-08-03 at 17 50 49" src="https://github.com/user-attachments/assets/3e828215-ddba-4d1d-8f4d-e583058e7fe6" />
 
 *Screenshot 4: Audio upload and transcription interface*
 
@@ -278,16 +274,25 @@ docker run -p 8000:8000 -p 5000:5000 uruti-mlops
 [INSERT DEVELOPER DASHBOARD SCREENSHOTS HERE]
 
 *Screenshot 1: Main developer dashboard with system metrics and model performance*
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 17 49 45" src="https://github.com/user-attachments/assets/ce6e46c9-6381-42ea-a1e7-6d48c70e475a" />
 
-*Screenshot 2: Model comparison view showing all four models' performance*
+*Screenshot 2: Model metrics *
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 14 57" src="https://github.com/user-attachments/assets/becc9903-9e9e-4d1f-887f-38fbbf9c4e1d" />
+
 
 *Screenshot 3: User management interface with API usage tracking*
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 15 21" src="https://github.com/user-attachments/assets/b9cd5f3e-dfa7-4fa5-b89f-1f41e8b8aaf3" />
+
 
 *Screenshot 4: Model retraining interface with Weights & Biases integration*
 
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 15 46" src="https://github.com/user-attachments/assets/148209c3-6601-4493-813f-33d8c721a665" />
+
 *Screenshot 5: Real-time monitoring dashboard with system health indicators*
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 16 23" src="https://github.com/user-attachments/assets/3200973b-fcf2-43f1-9514-75519c2b8ae4" />
 
 *Screenshot 6: Database management and migration interface*
+<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 16 38" src="https://github.com/user-attachments/assets/c7269d56-ec34-48e8-bc6c-23b2c8d7aed7" />
 
 ---
 
@@ -456,13 +461,8 @@ locust -f locustfile.py --host=http://localhost:8000 --users 100 --spawn-rate 10
 #### Performance Results
 
 ##### Single Container Performance
-| Users | RPS | Avg Response Time | 95th Percentile | Failure Rate |
-|-------|-----|-------------------|-----------------|--------------|
-| 1     | 22  | 45ms             | 89ms           | 0%          |
-| 10    | 180 | 55ms             | 120ms          | 0%          |
-| 50    | 650 | 77ms             | 180ms          | 0.1%        |
-| 100   | 850 | 118ms            | 290ms          | 2.3%        |
-| 500   | 920 | 540ms            | 1200ms         | 15.7%       |
+<img width="1440" height="498" alt="Screenshot 2025-08-03 at 18 17 59" src="https://github.com/user-attachments/assets/e22b8965-2b81-4d07-bfdf-a55339b7ad6c" />
+
 
 ##### Model-Specific Performance
 - **DistilBERT**: Fastest inference (35ms avg)
@@ -534,9 +534,9 @@ locust -f locustfile.py --host=http://localhost:8000 --users 100 --spawn-rate 10
 ## 📞 Support & Contact
 
 ### Project Team
-- **Lead Developer**: David Niyonshuti (david@uruti.rw)
-- **ML Engineer**: [Team Member] (email@uruti.rw)
-- **Frontend Developer**: [Team Member] (email@uruti.rw)
+- **Lead Developer**: David Niyonshuti (d.niyonshut@alustudent.com)
+- **ML Engineer**: David Niyonshuti (d.niyonshut@alustudent.com)
+- **Frontend Developer**: David Niyonshuti (d.niyonshut@alustudent.com)
 
 ### Getting Help
 - **Issues**: Report bugs via GitHub Issues
@@ -559,7 +559,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **Weights & Biases**: For comprehensive ML experiment tracking
 - **FastAPI Team**: For the high-performance web framework
 - **Aiven**: For reliable cloud database services
-- **Rwanda Innovation Hub**: For supporting local tech innovation
+- **Wandb.ai**: For model performance over api
 
 ---
 
@@ -578,6 +578,6 @@ The demo video showcases:
 
 ---
 
-*Last updated: [Current Date]*
+*Last updated: 03-08-2025*
 *Version: 2.1.0*
 *Models: DistilBERT, RoBERTa, ALBERT, TensorFlow (91% accuracy)*
