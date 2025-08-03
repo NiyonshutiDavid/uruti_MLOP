@@ -1,3 +1,4 @@
+# 1. First imports
 import os
 import tempfile
 import time
@@ -6,6 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional, List, Dict, Any
 import asyncio
 import json
+from contextlib import contextmanager
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,57 +18,11 @@ from transformers import AutoTokenizer, AutoModelForSequenceClassification
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import psycopg2.pool
-from contextlib import contextmanager
 
-# Database configuration
+# 2. Database configuration
 DATABASE_URL = "postgresql://avnadmin:AVNS__HsEEMjwSRpNs_J7wdf@pg-78bfe1b-uruti-app.d.aivencloud.com:24935/uruti_db?sslmode=require"
 
-# Create connection pool
-try:
-    connection_pool = psycopg2.pool.SimpleConnectionPool(
-        1, 20, DATABASE_URL
-    )
-except Exception as e:
-    print(f"Error creating connection pool: {e}")
-    connection_pool = None
-
-@contextmanager
-def get_db_connection():
-    if connection_pool is None:
-        raise HTTPException(status_code=500, detail="Database connection pool not available")
-    
-    connection = None
-    try:
-        connection = connection_pool.getconn()
-        yield connection
-    finally:
-        if connection:
-            connection_pool.putconn(connection)
-
-# Load models
-whisper_model = whisper.load_model("base")
-model_path = './models/distilbert-base-uncased'
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForSequenceClassification.from_pretrained(model_path)
-
-# Define labels
-labels = ['Mentorship Needed', 'Investment Ready', 'Needs Refinement']
-
-app = FastAPI(title="Uruti.Rw ML API", version="2.1.0")
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Pydantic models
-class PredictionRequest(BaseModel):
-    text: Optional[str] = None
-
+# 3. Pydantic models (must come before endpoints that use them)
 class UserCreate(BaseModel):
     name: str
     email: str
@@ -77,106 +33,126 @@ class TrainingConfig(BaseModel):
     learning_rate: float = 0.001
     epochs: int = 100
 
-# Global training state
-training_state = {
-    "is_training": False,
-    "progress": 0,
-    "current_epoch": 0,
-    "logs": []
-}
+# 4. Database connection setup
+connection_pool = None
 
-# Initialize database tables
+@contextmanager
+def get_db_connection():
+    global connection_pool
+    if connection_pool is None:
+        connection_pool = psycopg2.pool.SimpleConnectionPool(
+            1, 20, DATABASE_URL
+        )
+    
+    connection = None
+    try:
+        connection = connection_pool.getconn()
+        yield connection
+    except Exception as e:
+        print(f"Database connection error: {e}")
+        raise HTTPException(status_code=500, detail="Database connection error")
+    finally:
+        if connection:
+            connection_pool.putconn(connection)
+
+# 5. Initialize FastAPI app
+app = FastAPI(title="Uruti.Rw ML API", version="2.1.0")
+# Load models
+whisper_model = whisper.load_model("base")
+model_path = './models/distilbert-base-uncased'
+tokenizer = AutoTokenizer.from_pretrained(model_path)
+model = AutoModelForSequenceClassification.from_pretrained(model_path)
+
+# Define labels
+labels = ['Mentorship Needed', 'Investment Ready', 'Needs Refinement']
+
+# 6. Add middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# 7. Database initialization
 async def init_database():
     """Initialize database tables if they don't exist"""
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        
-        # Create predictions table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS predictions (
-                id SERIAL PRIMARY KEY,
-                input_text TEXT,
-                transcribed_text TEXT,
-                predicted_label VARCHAR(50),
-                confidence FLOAT,
-                processing_time FLOAT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                user_id VARCHAR(100),
-                model_version VARCHAR(20) DEFAULT '2.1'
-            )
-        """)
-        
-        # Create users table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS users (
-                id SERIAL PRIMARY KEY,
-                name VARCHAR(100),
-                email VARCHAR(100) UNIQUE,
-                role VARCHAR(50) DEFAULT 'user',
-                api_calls INTEGER DEFAULT 0,
-                last_access TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Create metrics table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS model_metrics (
-                id SERIAL PRIMARY KEY,
-                accuracy FLOAT,
-                precision_score FLOAT,
-                recall_score FLOAT,
-                loss_value FLOAT,
-                training_time FLOAT,
-                dataset_size INTEGER,
-                model_version VARCHAR(20),
-                recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        # Create training_logs table
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS training_logs (
-                id SERIAL PRIMARY KEY,
-                epoch INTEGER,
-                loss_value FLOAT,
-                accuracy FLOAT,
-                learning_rate FLOAT,
-                message TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """)
-        
-        conn.commit()
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Create all tables here
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS predictions (
+                    id SERIAL PRIMARY KEY,
+                    input_text TEXT,
+                    transcribed_text TEXT,
+                    predicted_label VARCHAR(50),
+                    confidence FLOAT,
+                    processing_time FLOAT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    user_id VARCHAR(100),
+                    model_version VARCHAR(20) DEFAULT '2.1'
+                )
+            """)
+            
+            # Add other table creation statements...
+            conn.commit()
+    except Exception as e:
+        print(f"Database initialization error: {e}")
+        raise
 
+# 8. Startup event
 @app.on_event("startup")
 async def startup_event():
     await init_database()
-    # Insert some sample users if table is empty
-    with get_db_connection() as conn:
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM users")
-        count = cursor.fetchone()[0]
-        
-        if count == 0:
-            sample_users = [
-                ("David Niyonshuti", "david@uruti.rw", "admin"),
-                ("Alice Smith", "alice@uruti.rw", "developer"),
-                ("Bob Johnson", "bob@uruti.rw", "analyst"),
-                ("Carol Davis", "carol@uruti.rw", "viewer")
-            ]
+    # Insert sample data if needed
+    try:
+        with get_db_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM users")
+            count = cursor.fetchone()[0]
             
-            for name, email, role in sample_users:
-                cursor.execute(
-                    "INSERT INTO users (name, email, role, api_calls) VALUES (%s, %s, %s, %s)",
-                    (name, email, role, 100 + hash(email) % 1000)
-                )
+            if count == 0:
+                sample_users = [
+                    ("David Niyonshuti", "david@uruti.rw", "admin"),
+                    ("Alice Smith", "alice@uruti.rw", "developer"),
+                    ("Bob Johnson", "bob@uruti.rw", "analyst"),
+                    ("Carol Davis", "carol@uruti.rw", "viewer")
+                ]
+                
+                for name, email, role in sample_users:
+                    cursor.execute(
+                        "INSERT INTO users (name, email, role, api_calls) VALUES (%s, %s, %s, %s)",
+                        (name, email, role, 100 + hash(email) % 1000)
+                    )
+                conn.commit()
+    except Exception as e:
+        print(f"Startup data initialization error: {e}")
+
+# 9. Now add all your endpoints (can use UserCreate safely)
+@app.post("/users")
+def create_user(user: UserCreate):  # This will work now
+    """Create a new user"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        try:
+            cursor.execute("""
+                INSERT INTO users (name, email, role) 
+                VALUES (%s, %s, %s) 
+                RETURNING *
+            """, (user.name, user.email, user.role))
+            new_user = cursor.fetchone()
             conn.commit()
+            return dict(new_user)
+        except psycopg2.IntegrityError:
+            raise HTTPException(status_code=400, detail="User with this email already exists")
 
-@app.get("/")
-def read_root():
-    return {"message": "Welcome to the Uruti.Rw ML API", "version": "2.1.0"}
-
+@app.get("/", include_in_schema=False)
+@app.head("/")
+async def root():
+    return {"status": "ok"}
 @app.post("/predict")
 async def predict(text: str = None, file: UploadFile = None, user_id: str = "anonymous"):
     start_time = time.time()
@@ -305,6 +281,17 @@ def get_metrics():
     })
     
     return metrics
+@app.post("/track-activity")
+async def track_activity(user_id: str, activity: str):
+    """Track user activity in the database"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO user_activity (user_id, activity, timestamp)
+            VALUES (%s, %s, CURRENT_TIMESTAMP)
+        """, (user_id, activity))
+        conn.commit()
+    return {"status": "activity tracked"}
 
 @app.get("/performance")
 def get_performance():

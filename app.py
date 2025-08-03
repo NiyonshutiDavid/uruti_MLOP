@@ -93,7 +93,7 @@ def retrain_page():
     """
     Serve the model retraining page.
     """
-    return "<h1>Model Retraining Page - Coming Soon</h1>"
+    return 
 
 if __name__ == '__main__':
     app.run(debug=True, port=5000)

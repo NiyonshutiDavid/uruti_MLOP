@@ -224,7 +224,7 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
   late Animation<double> _animation;
 
   final TextEditingController _textController = TextEditingController();
-  final String apiUrl = 'http://localhost:8080/predict';
+  final String apiUrl = 'http://localhost:8000/predict';
 
   @override
   void initState() {
@@ -239,6 +239,7 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
     );
     _initRecorder();
     _initPlayer();
+    _trackUserActivity('app_launch'); // Add this line
   }
 
   Future<void> _initRecorder() async {
@@ -346,12 +347,40 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
       );
 
       if (response.statusCode == 200) {
-        return json.decode(response.body);
+        // Log the prediction to history
+        final result = json.decode(response.body);
+        HistoryManager.addHistory(AnalysisHistory(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          inputText: text,
+          result: result,
+          timestamp: DateTime.now(),
+          inputType: 'text',
+        ));
+        
+        // Track activity
+        await _trackUserActivity('text_prediction');
+        
+        return result;
       } else {
         throw Exception('Failed to analyze text: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error connecting to API: $e');
+    }
+  }
+  Future<void> _trackUserActivity(String activity) async {
+    try {
+      await http.post(
+        Uri.parse('$apiUrl/track-activity'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'user_id': 'anonymous',
+          'activity': activity,
+          'timestamp': DateTime.now().toIso8601String(),
+        }),
+      );
+    } catch (e) {
+      print('Error tracking activity: $e');
     }
   }
 
@@ -1651,7 +1680,7 @@ class RefineResultPage extends StatefulWidget {
 
 class _RefineResultPageState extends State<RefineResultPage> {
   final TextEditingController _refineController = TextEditingController();
-  final String apiUrl = 'http://localhost:8080/predict'; // Assuming same endpoint
+  final String apiUrl = 'http://localhost:8000/predict'; // Assuming same endpoint
 
   Future<Map<String, dynamic>> _refineWithAI(String refinementQuery) async {
     try {

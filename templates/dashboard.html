@@ -325,7 +325,32 @@
             font-size: 14px;
             font-weight: 500;
         }
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
 
+        .modal-content {
+            background: #0d1a0d;
+            padding: 24px;
+            border-radius: 12px;
+            border: 1px solid #1a331a;
+            width: 400px;
+            max-width: 90%;
+        }
+
+        .modal h3 {
+            margin-bottom: 20px;
+            color: #22c55e;
+        }
         .chart-container {
             height: 300px;
             background: #0d1a0d;
@@ -633,8 +658,33 @@
                     </div>
 
                     <div style="display: flex; gap: 16px;">
-                        <button class="btn btn-primary" onclick="startTraining()">Start Training</button>
-                        <button class="btn btn-secondary">Configure Training</button>
+                        <button class="btn btn-primary" id="startTrainingBtn" >Start Training</button>
+                        <button class="btn btn-secondary" id="configureTrainingBtn">Configure Training</button>
+                    </div>
+                    <div id="trainingConfigModal" class="modal" style="display: none;">
+                        <div class="modal-content">
+                            <h3>Training Configuration</h3>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Batch Size</label>
+                                <input type="number" id="batchSize" class="form-input" value="32" min="1" max="256">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Learning Rate</label>
+                                <input type="number" id="learningRate" class="form-input" value="0.001" step="0.0001" min="0.0001" max="0.1">
+                            </div>
+                            
+                            <div class="form-group">
+                                <label class="form-label">Epochs</label>
+                                <input type="number" id="epochs" class="form-input" value="10" min="1" max="100">
+                            </div>
+                            
+                            <div style="display: flex; gap: 16px; margin-top: 20px;">
+                                <button class="btn btn-primary" id="saveConfigBtn">Save Configuration</button>
+                                <button class="btn btn-secondary" id="cancelConfigBtn">Cancel</button>
+                            </div>
+                        </div>
                     </div>
 
                     <div style="margin-top: 24px;">
@@ -852,6 +902,7 @@
                     <h2>Training Logs</h2>
                     <div class="logs-container" id="training-logs-display">
                         <!-- Training logs will be loaded here -->
+
                     </div>
                 </div>
             </div>
@@ -969,6 +1020,7 @@
             </div>
         </main>
     </div>
+
 
     <script>
         // Configuration
@@ -1261,7 +1313,7 @@
             
             let progress = 0;
             let epoch = 1;
-            const maxEpochs = 10;
+            const maxEpochs = trainingConfig.epochs || 10; // Use configured epochs
             
             trainingLog.innerHTML = 'Starting training...<br>';
             
@@ -1274,19 +1326,19 @@
                     clearInterval(trainingInterval);
                     trainingInProgress = false;
                     progressText.textContent = 'Training completed successfully!';
-                    trainingLog.innerHTML += `Training completed! Final accuracy: 94.7%<br>`;
+                    trainingLog.innerHTML += `Training completed! Final accuracy: ${(0.5 + Math.random() * 0.5).toFixed(2)}%<br>`;
                     trainingLog.innerHTML += `Model saved successfully.<br>`;
                 } else {
                     progressText.textContent = `Training in progress... Epoch ${epoch}/${maxEpochs} (${Math.round(progress)}%)`;
                     
                     // Add random training log entries
-                    const logEntries = [
-                        `Epoch ${epoch}/10 - loss: ${(0.5 - (progress/100) * 0.4).toFixed(4)} - accuracy: ${(0.5 + (progress/100) * 0.4).toFixed(4)}`,
-                        `Validation loss: ${(0.6 - (progress/100) * 0.45).toFixed(4)} - val_accuracy: ${(0.45 + (progress/100) * 0.45).toFixed(4)}`,
-                        `Learning rate: ${(0.001 * (1 - progress/200)).toFixed(6)}`
-                    ];
-                    
                     if (Math.random() > 0.7) {
+                        const logEntries = [
+                            `Epoch ${epoch}/${maxEpochs} - Loss: ${(0.5 - (progress/100) * 0.4).toFixed(4)} - Accuracy: ${(0.5 + (progress/100) * 0.4).toFixed(4)}`,
+                            `Learning rate: ${trainingConfig.learning_rate.toFixed(6)}`,
+                            `Batch size: ${trainingConfig.batch_size}`
+                        ];
+                        
                         trainingLog.innerHTML += logEntries[Math.floor(Math.random() * logEntries.length)] + '<br>';
                         trainingLog.scrollTop = trainingLog.scrollHeight;
                     }
@@ -1295,7 +1347,6 @@
                 progressBar.style.width = progress + '%';
             }, 500);
         }
-
         // Settings functionality
         function saveSettings() {
             const settings = {
@@ -1584,7 +1635,6 @@
                 if (status.is_training) {
                     progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
                 } else if (status.progress === 100) {
-Training completed successfully!';
                     progressText.textContent = 'Training completed successfully!';
                 } else {
                     progressText.textContent = 'Ready to start training';
@@ -1886,34 +1936,7 @@ Training completed successfully!';
         }
 
         // Training functionality
-        async function startTraining() {
-            if (trainingInProgress) return;
-            
-            try {
-                const response = await fetch(`${API_BASE}/training/start`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        batch_size: 32,
-                        learning_rate: 0.001,
-                        epochs: 10
-                    })
-                });
-                
-                if (response.ok) {
-                    trainingInProgress = true;
-                    pollTrainingStatus();
-                } else {
-                    throw new Error('Failed to start training');
-                }
-            } catch (error) {
-                console.error('Error starting training:', error);
-                // Fallback to simulation if API is not available
-                simulateTraining();
-            }
-        }
+        
 
         function pollTrainingStatus() {
             const interval = setInterval(async () => {
@@ -1953,3 +1976,361 @@ Training completed successfully!';
             trainingLog.scrollTop = trainingLog.scrollHeight;
         }
     </script>
+    <script>
+    // Configuration - Update with your actual API URL
+    const API_BASE = 'http://localhost:8000';
+    
+    // Global variables
+    let trainingInProgress = false;
+    let metricsChart = null;
+    let performanceChart = null;
+    let labelChart = null;
+    let queryDistributionChart = null;
+    let pollingInterval = null;
+
+    // Initialize dashboard
+    window.addEventListener('load', async () => {
+        await loadTabData('overview');
+        startAutoRefresh();
+        updateConnectionStatus();
+        
+        // Add export button
+        const exportButton = document.createElement('button');
+        exportButton.className = 'btn btn-secondary';
+        exportButton.style.cssText = 'margin-left: 16px; font-size: 12px; padding: 6px 12px;';
+        exportButton.textContent = 'Export Data';
+        exportButton.onclick = () => {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab) exportData(activeTab.id);
+        };
+        document.querySelector('.quick-actions').appendChild(exportButton);
+    });
+
+    // Enhanced API Integration Functions
+    async function fetchWithRetry(url, options = {}, retries = 3) {
+        for (let i = 0; i < retries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (response.ok) return response;
+                throw new Error(`HTTP ${response.status}`);
+            } catch (error) {
+                if (i === retries - 1) throw error;
+                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+            }
+        }
+    }
+
+    // Real-time Data Loading
+    async function loadTabData(tabId) {
+        try {
+            switch(tabId) {
+                case 'overview':
+                    await loadOverviewData();
+                    break;
+                case 'metrics':
+                    await loadMetricsData();
+                    break;
+                case 'performance':
+                    await loadPerformanceData();
+                    break;
+                case 'database':
+                    await loadDatabaseData();
+                    break;
+                case 'users':
+                    await loadUsersData();
+                    break;
+                case 'retrain':
+                    await loadTrainingStatus();
+                    break;
+                case 'logs':
+                    await loadLogsData();
+                    break;
+                case 'query-stats':
+                    await loadQueryStatsData();
+                    break;
+            }
+        } catch (error) {
+            console.error(`Error loading ${tabId} data:`, error);
+            showErrorToast(`Failed to load ${tabId} data`);
+            loadFallbackData(tabId);
+        }
+    }
+
+    // Enhanced Training Functions
+    
+
+    async function pollTrainingStatus() {
+        if (pollingInterval) clearInterval(pollingInterval);
+        
+        pollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch(`${API_BASE}/training/status`);
+                const status = await response.json();
+                updateTrainingDisplay(status);
+                
+                if (!status.is_training) {
+                    trainingInProgress = false;
+                    clearInterval(pollingInterval);
+                    showSuccessToast('Training completed!');
+                    // Refresh metrics after training
+                    if (document.getElementById('metrics').classList.contains('active')) {
+                        await loadMetricsData();
+                    }
+                }
+            } catch (error) {
+                console.error('Error polling training status:', error);
+                clearInterval(pollingInterval);
+            }
+        }, 2000);
+    }
+
+    function updateTrainingDisplay(status) {
+        const progressBar = document.getElementById('training-progress');
+        const progressText = document.getElementById('progress-text');
+        const trainingLog = document.getElementById('training-log');
+        
+        progressBar.style.width = `${status.progress}%`;
+        
+        if (status.is_training) {
+            progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
+        } else if (status.progress === 100) {
+            progressText.textContent = 'Training completed successfully!';
+        } else {
+            progressText.textContent = 'Ready to start training';
+        }
+        
+        if (status.logs && status.logs.length > 0) {
+            trainingLog.innerHTML = status.logs.join('<br>');
+            trainingLog.scrollTop = trainingLog.scrollHeight;
+        }
+    }
+
+    // Enhanced Data Loading Functions
+    async function loadMetricsData() {
+        const response = await fetchWithRetry(`${API_BASE}/metrics`);
+        const data = await response.json();
+        
+        // Update metrics display
+        document.getElementById('metrics-accuracy').textContent = `${(data.accuracy * 100).toFixed(1)}%`;
+        document.getElementById('metrics-loss').textContent = data.loss_value.toFixed(3);
+        document.getElementById('metrics-precision').textContent = `${(data.precision_score * 100).toFixed(1)}%`;
+        document.getElementById('metrics-recall').textContent = `${(data.recall_score * 100).toFixed(1)}%`;
+        
+        // Update charts
+        createMetricsChart();
+        createLabelChart(data.label_distribution);
+    }
+
+    async function loadPerformanceData() {
+        const response = await fetchWithRetry(`${API_BASE}/performance`);
+        const data = await response.json();
+        
+        // Update performance display
+        document.getElementById('perf-inference').textContent = `${data.avg_inference_time}ms`;
+        document.getElementById('perf-requests').textContent = data.requests_per_minute.toLocaleString();
+        document.getElementById('perf-uptime').textContent = `${data.uptime}%`;
+        document.getElementById('perf-memory').textContent = data.memory_usage;
+        document.getElementById('cpu-usage').textContent = data.cpu_usage;
+        document.getElementById('gpu-usage').textContent = data.gpu_usage;
+        
+        createPerformanceChart();
+    }
+
+    async function loadUsersData() {
+        const response = await fetchWithRetry(`${API_BASE}/users`);
+        const users = await response.json();
+        
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = '';
+        
+        users.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.name}</td>
+                <td>${user.email}</td>
+                <td>${user.role}</td>
+                <td>${user.last_access_formatted}</td>
+                <td>${user.api_calls.toLocaleString()}</td>
+            `;
+            tbody.appendChild(row);
+        });
+    }
+
+    // Utility Functions
+    function showSuccessToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #22c55e;
+            color: white;
+            border-radius: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function showErrorToast(message) {
+        const toast = document.createElement('div');
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 24px;
+            background: #ef4444;
+            color: white;
+            border-radius: 8px;
+            z-index: 1000;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        `;
+        toast.textContent = message;
+        document.body.appendChild(toast);
+        setTimeout(() => toast.remove(), 3000);
+    }
+
+    function startAutoRefresh() {
+        setInterval(() => {
+            const activeTab = document.querySelector('.tab-content.active');
+            if (activeTab && !trainingInProgress) {
+                loadTabData(activeTab.id);
+            }
+        }, 30000);
+    }
+
+    // Update connection status indicator
+    function updateConnectionStatus() {
+        const statusIndicator = document.createElement('div');
+        statusIndicator.id = 'connection-status';
+        statusIndicator.style.cssText = `
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 12px;
+            font-weight: 500;
+            z-index: 1000;
+            transition: all 0.3s ease;
+        `;
+        document.body.appendChild(statusIndicator);
+        
+        async function checkConnection() {
+            try {
+                // Change from HEAD to GET request
+                await fetch(`${API_BASE}/`, { method: 'GET' });
+                statusIndicator.textContent = '● API Connected';
+                statusIndicator.style.background = '#16a34a20';
+                statusIndicator.style.color = '#22c55e';
+                statusIndicator.style.border = '1px solid #22c55e';
+            } catch (error) {
+                statusIndicator.textContent = '● API Disconnected';
+                statusIndicator.style.background = '#dc262620';
+                statusIndicator.style.color = '#ef4444';
+                statusIndicator.style.border = '1px solid #ef4444';
+            }
+        }
+        
+        checkConnection();
+        setInterval(checkConnection, 10000);
+    }
+
+                // Training configuration object
+            let trainingConfig = {
+                batch_size: 32,
+                learning_rate: 0.001,
+                epochs: 10
+            };
+
+            // Initialize training buttons
+            document.addEventListener('DOMContentLoaded', () => {
+                // Start Training button
+                const startTrainingBtn = document.getElementById('startTrainingBtn');
+                if (startTrainingBtn) {
+                    startTrainingBtn.addEventListener('click', startTraining);
+                }
+
+                // Configure Training button
+                const configureTrainingBtn = document.getElementById('configureTrainingBtn');
+                if (configureTrainingBtn) {
+                    configureTrainingBtn.addEventListener('click', showTrainingConfig);
+                }
+
+                // Modal buttons
+                const saveConfigBtn = document.getElementById('saveConfigBtn');
+                const cancelConfigBtn = document.getElementById('cancelConfigBtn');
+                const modal = document.getElementById('trainingConfigModal');
+
+                if (saveConfigBtn && cancelConfigBtn && modal) {
+                    saveConfigBtn.addEventListener('click', saveTrainingConfig);
+                    cancelConfigBtn.addEventListener('click', () => {
+                        modal.style.display = 'none';
+                    });
+                }
+            });
+
+            // Show training configuration modal
+            function showTrainingConfig() {
+                const modal = document.getElementById('trainingConfigModal');
+                if (!modal) return;
+                
+                // Set current values in inputs
+                document.getElementById('batchSize').value = trainingConfig.batch_size;
+                document.getElementById('learningRate').value = trainingConfig.learning_rate;
+                document.getElementById('epochs').value = trainingConfig.epochs;
+                
+                modal.style.display = 'flex';
+            }
+
+            // Save training configuration
+            function saveTrainingConfig() {
+                const modal = document.getElementById('trainingConfigModal');
+                if (!modal) return;
+                
+                // Get values from inputs
+                trainingConfig = {
+                    batch_size: parseInt(document.getElementById('batchSize').value) || 32,
+                    learning_rate: parseFloat(document.getElementById('learningRate').value) || 0.001,
+                    epochs: parseInt(document.getElementById('epochs').value) || 10
+                };
+                
+                modal.style.display = 'none';
+                showSuccessToast('Training configuration saved!');
+            }
+
+            // Updated startTraining function
+            async function startTraining() {
+                if (trainingInProgress) {
+                    showErrorToast('Training already in progress');
+                    return;
+                }
+                
+                try {
+                    const response = await fetch(`${API_BASE}/training/start`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify(trainingConfig) // Use the configured values
+                    });
+                    
+                    if (response.ok) {
+                        trainingInProgress = true;
+                        showSuccessToast('Training started with current configuration');
+                        pollTrainingStatus();
+                    } else {
+                        throw new Error('Failed to start training');
+                    }
+                } catch (error) {
+                    console.error('Error starting training:', error);
+                    showErrorToast('Failed to start training');
+                    // Fallback to simulation if API is not available
+                    simulateTraining();
+                }
+            }
+
+</script>
