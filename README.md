@@ -248,52 +248,30 @@ docker run -p 8000:8000 -p 5000:5000 uruti-mlops
 
 ### Mobile Application (End Users)
 
-*Screenshot 1: Mobile app home screen with audio recording interface for startup pitch submission*
-<img width="1206" height="2622" alt="simulator_screenshot_4079938B-7161-4CE8-8448-6C0290394FAA" src="https://github.com/user-attachments/assets/f2055fbf-b503-4977-89ae-2d91f1080ca6" />
+| Screenshot | Description |
+|------------|-------------|
+| <img width="300" alt="Mobile app home screen" src="https://github.com/user-attachments/assets/f2055fbf-b503-4977-89ae-2d91f1080ca6"> | **Home Screen**: Audio recording interface for startup pitch submission |
+| <img width="300" alt="Text input screen" src="https://github.com/user-attachments/assets/77cdb2c4-0bd6-414a-8fff-0c48b62d6006"> | **Text Input**: Screen where users can type their startup ideas |
+| <img width="300" alt="Prediction results" src="https://github.com/user-attachments/assets/b0e04fd2-54ef-4d77-9126-08909b75bba2"> | **Results**: Real-time prediction showing classification and confidence scores |
+| <img width="300" alt="User history" src="https://github.com/user-attachments/assets/9e032869-a472-4bcb-908d-741d82508f6d"> | **History**: Past pitch submissions and feedback |
 
+### Web Application (Admin Dashboard)
 
-*Screenshot 2: Text input screen where users can type their startup ideas*
-<img width="1206" height="2622" alt="simulator_screenshot_6EF044CD-7C57-497A-8E36-78DBE0017B6B" src="https://github.com/user-attachments/assets/77cdb2c4-0bd6-414a-8fff-0c48b62d6006" />
+| Screenshot | Description |
+|------------|-------------|
+| <img width="600" alt="Main dashboard" src="https://github.com/user-attachments/assets/ce6e46c9-6381-42ea-a1e7-6d48c70e475a"> | **Main Dashboard**: System metrics and model performance overview |
+| <img width="600" alt="Prediction results" src="https://github.com/user-attachments/assets/89148ebb-a7b3-4efb-bafb-f830380eb64d"> | **Results Display**: Real-time prediction results with category breakdown |
+| <img width="600" alt="User analytics" src="https://github.com/user-attachments/assets/3e828215-ddba-4d1d-8f4d-e583058e7fe6"> | **Analytics**: User submission history and metrics dashboard |
+| <img width="600" alt="Model metrics" src="https://github.com/user-attachments/assets/becc9903-9e9e-4d1f-887f-38fbbf9c4e1d"> | **Model Metrics**: Detailed performance statistics and evaluation |
 
-*Screenshot 3: Real-time prediction results showing classification and confidence scores*
-<img width="1206" height="2622" alt="simulator_screenshot_07A7BE38-CF8B-44D1-9B8E-DE82E20BD8BE" src="https://github.com/user-attachments/assets/b0e04fd2-54ef-4d77-9126-08909b75bba2" />
+### Developer Interface
 
-*Screenshot 4: User history showing past pitch submissions and feedback*
-<img width="1206" height="2622" alt="simulator_screenshot_7FF3A098-A4D3-4181-A214-66E489C40C6D" src="https://github.com/user-attachments/assets/9e032869-a472-4bcb-908d-741d82508f6d" />
-
-
-*Screenshot 2: Real-time prediction results display with category breakdown*
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 17 50 16" src="https://github.com/user-attachments/assets/89148ebb-a7b3-4efb-bafb-f830380eb64d" />
-
-*Screenshot 3: User analytics and submission history dashboard*
-<img width="1440" height="899" alt="Screenshot 2025-08-03 at 17 50 49" src="https://github.com/user-attachments/assets/3e828215-ddba-4d1d-8f4d-e583058e7fe6" />
-
-*Screenshot 4: Audio upload and transcription interface*
-
-### Developer Dashboard (Flask)
-[INSERT DEVELOPER DASHBOARD SCREENSHOTS HERE]
-
-*Screenshot 1: Main developer dashboard with system metrics and model performance*
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 17 49 45" src="https://github.com/user-attachments/assets/ce6e46c9-6381-42ea-a1e7-6d48c70e475a" />
-
-*Screenshot 2: Model metrics *
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 14 57" src="https://github.com/user-attachments/assets/becc9903-9e9e-4d1f-887f-38fbbf9c4e1d" />
-
-
-*Screenshot 3: User management interface with API usage tracking*
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 15 21" src="https://github.com/user-attachments/assets/b9cd5f3e-dfa7-4fa5-b89f-1f41e8b8aaf3" />
-
-
-*Screenshot 4: Model retraining interface with Weights & Biases integration*
-
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 15 46" src="https://github.com/user-attachments/assets/148209c3-6601-4493-813f-33d8c721a665" />
-
-*Screenshot 5: Real-time monitoring dashboard with system health indicators*
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 16 23" src="https://github.com/user-attachments/assets/3200973b-fcf2-43f1-9514-75519c2b8ae4" />
-
-*Screenshot 6: Database management and migration interface*
-<img width="1440" height="900" alt="Screenshot 2025-08-03 at 18 16 38" src="https://github.com/user-attachments/assets/c7269d56-ec34-48e8-bc6c-23b2c8d7aed7" />
-
+| Screenshot | Description |
+|------------|-------------|
+| <img width="600" alt="User management" src="https://github.com/user-attachments/assets/b9cd5f3e-dfa7-4fa5-b89f-1f41e8b8aaf3"> | **User Management**: API usage tracking and access control |
+| <img width="600" alt="Model training" src="https://github.com/user-attachments/assets/148209c3-6601-4493-813f-33d8c721a665"> | **Model Training**: Retraining interface with Weights & Biases integration |
+| <img width="600" alt="System monitoring" src="https://github.com/user-attachments/assets/3200973b-fcf2-43f1-9514-75519c2b8ae4"> | **Monitoring**: Real-time system health indicators |
+| <img width="600" alt="Database management" src="https://github.com/user-attachments/assets/c7269d56-ec34-48e8-bc6c-23b2c8d7aed7"> | **Database**: Management and migration interface |
 ---
 
 ## 🔄 ML Pipeline Features
