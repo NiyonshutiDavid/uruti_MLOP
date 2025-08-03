@@ -491,6 +491,9 @@ locust -f locustfile.py --host=http://localhost:8000 --users 100 --spawn-rate 10
 - **CORS Configuration**: Restricted cross-origin requests
 
 ---
+## Disclaimer
+Notebook can't be viewed on github, but you can check it directly from google colab for it's copy that is on drive:
+[https://colab.research.google.com/drive/1YMs-V08EZYY6n_okgVKjuiJXstFkmQSL?usp=sharing]
 
 ## 🤝 Contributing
 
