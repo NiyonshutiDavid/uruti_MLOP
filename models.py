@@ -1,33 +1,23 @@
-from flask_sqlalchemy import SQLAlchemy
+from app import db
 
-class UserRequest:
-    def __init__(self, db_instance):
-        self.db = db_instance
-    
-    def create_model(self):
-        class UserRequestModel(self.db.Model):
-            id = self.db.Column(self.db.Integer, primary_key=True)
-            input_text = self.db.Column(self.db.String(500), nullable=False)
-            predicted_label = self.db.Column(self.db.String(50), nullable=False)
-            timestamp = self.db.Column(self.db.DateTime, server_default=self.db.func.now())
+class UserRequest(db.Model):
+    __tablename__ = 'user_request' # Explicitly name the table
 
-            def __repr__(self):
-                return f'<UserRequest {self.id}>'
-        
-        return UserRequestModel
+    id = db.Column(db.Integer, primary_key=True)
+    input_text = db.Column(db.String(500), nullable=False)
+    predicted_label = db.Column(db.String(50), nullable=False)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
-class ModelLog:
-    def __init__(self, db_instance):
-        self.db = db_instance
+    def __repr__(self):
+        return f'<UserRequest {self.id}>'
 
-    def create_model(self):
-        class ModelLogModel(self.db.Model):
-            id = self.db.Column(self.db.Integer, primary_key=True)
-            event_type = self.db.Column(self.db.String(50), nullable=False)
-            event_details = self.db.Column(self.db.Text, nullable=True)
-            timestamp = self.db.Column(self.db.DateTime, server_default=self.db.func.now())
+class ModelLog(db.Model):
+    __tablename__ = 'model_log' # Explicitly name the table
 
-            def __repr__(self):
-                return f'<ModelLog {self.id} - {self.event_type}>'
+    id = db.Column(db.Integer, primary_key=True)
+    event_type = db.Column(db.String(50), nullable=False)
+    event_details = db.Column(db.Text, nullable=True)
+    timestamp = db.Column(db.DateTime, server_default=db.func.now())
 
-        return ModelLogModel
+    def __repr__(self):
+        return f'<ModelLog {self.id} - {self.event_type}>'

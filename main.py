@@ -9,8 +9,11 @@ import asyncio
 import json
 from contextlib import contextmanager
 
-from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks
+from fastapi import FastAPI, File, UploadFile, HTTPException, BackgroundTasks, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import torch
 import whisper
@@ -57,6 +60,13 @@ def get_db_connection():
 
 # 5. Initialize FastAPI app
 app = FastAPI(title="Uruti.Rw ML API", version="2.1.0")
+
+# Setup templates and static files
+templates = Jinja2Templates(directory="templates")
+# Mount static files if you have a static directory
+if os.path.exists("static"):
+    app.mount("/static", StaticFiles(directory="static"), name="static")
+
 # Load models
 whisper_model = whisper.load_model("base")
 model_path = './models/distilbert-base-uncased'
@@ -65,6 +75,14 @@ model = AutoModelForSequenceClassification.from_pretrained(model_path)
 
 # Define labels
 labels = ['Mentorship Needed', 'Investment Ready', 'Needs Refinement']
+
+# Training state
+training_state = {
+    "is_training": False,
+    "progress": 0,
+    "current_epoch": 0,
+    "logs": []
+}
 
 # 6. Add middleware
 app.add_middleware(
@@ -82,7 +100,7 @@ async def init_database():
         with get_db_connection() as conn:
             cursor = conn.cursor()
             
-            # Create all tables here
+            # Create predictions table
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS predictions (
                     id SERIAL PRIMARY KEY,
@@ -97,7 +115,77 @@ async def init_database():
                 )
             """)
             
-            # Add other table creation statements...
+            # Create users table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    name VARCHAR(255) NOT NULL,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    role VARCHAR(50) DEFAULT 'user',
+                    api_calls INTEGER DEFAULT 0,
+                    last_access TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create model_metrics table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS model_metrics (
+                    id SERIAL PRIMARY KEY,
+                    accuracy FLOAT,
+                    precision_score FLOAT,
+                    recall_score FLOAT,
+                    loss_value FLOAT,
+                    training_time INTEGER,
+                    dataset_size INTEGER,
+                    model_version VARCHAR(20),
+                    recorded_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create training_logs table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS training_logs (
+                    id SERIAL PRIMARY KEY,
+                    epoch INTEGER,
+                    loss_value FLOAT,
+                    accuracy FLOAT,
+                    learning_rate FLOAT,
+                    message TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create user_activity table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_activity (
+                    id SERIAL PRIMARY KEY,
+                    user_id VARCHAR(255),
+                    activity TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create user_requests table (from Flask app)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_requests (
+                    id SERIAL PRIMARY KEY,
+                    input_text TEXT,
+                    predicted_label VARCHAR(50),
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create model_logs table (from Flask app)
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS model_logs (
+                    id SERIAL PRIMARY KEY,
+                    event_type VARCHAR(100),
+                    event_details TEXT,
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             conn.commit()
     except Exception as e:
         print(f"Database initialization error: {e}")
@@ -131,60 +219,135 @@ async def startup_event():
     except Exception as e:
         print(f"Startup data initialization error: {e}")
 
-# 9. Now add all your endpoints (can use UserCreate safely)
-@app.post("/users")
-def create_user(user: UserCreate):  # This will work now
-    """Create a new user"""
+# ============= WEB APP ROUTES (from Flask app.py) =============
+
+@app.get("/", response_class=HTMLResponse)
+@app.head("/")
+async def home(request: Request):
+    """Home page"""
+    return HTMLResponse(content="<h1>Hello, Uruti Web App!</h1><p>API is running. Visit <a href='/docs'>/docs</a> for API documentation.</p>")
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard(request: Request):
+    """Serve the dashboard page"""
+    return templates.TemplateResponse("dashboard.html", {"request": request})
+
+@app.get("/requests_page", response_class=HTMLResponse)
+async def requests_page(request: Request):
+    """Serve the user requests page"""
+    return templates.TemplateResponse("requests.html", {"request": request})
+
+@app.get("/retrain", response_class=HTMLResponse)
+async def retrain_page(request: Request):
+    """Serve the model retraining page"""
+    return templates.TemplateResponse("retrain.html", {"request": request})
+
+@app.get("/requests")
+async def get_requests():
+    """Retrieve all user requests from the database"""
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
-        try:
-            cursor.execute("""
-                INSERT INTO users (name, email, role) 
-                VALUES (%s, %s, %s) 
-                RETURNING *
-            """, (user.name, user.email, user.role))
-            new_user = cursor.fetchone()
-            conn.commit()
-            return dict(new_user)
-        except psycopg2.IntegrityError:
-            raise HTTPException(status_code=400, detail="User with this email already exists")
+        cursor.execute("""
+            SELECT id, input_text, predicted_label, timestamp 
+            FROM user_requests 
+            ORDER BY timestamp DESC
+        """)
+        requests = cursor.fetchall()
+    
+    requests_data = [{
+        'id': req['id'],
+        'input_text': req['input_text'],
+        'predicted_label': req['predicted_label'],
+        'timestamp': req['timestamp'].isoformat() if req['timestamp'] else None
+    } for req in requests]
+    
+    return requests_data
 
-@app.get("/", include_in_schema=False)
-@app.head("/")
-async def root():
-    return {"status": "ok"}
+@app.get("/model_logs")
+async def get_model_logs():
+    """Return model logs as JSON"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT id, event_type, event_details, timestamp 
+            FROM model_logs 
+            ORDER BY timestamp DESC 
+            LIMIT 100
+        """)
+        logs = cursor.fetchall()
+    
+    logs_data = [{
+        'id': log['id'],
+        'event_type': log['event_type'],
+        'event_details': log['event_details'],
+        'timestamp': log['timestamp'].isoformat() if log['timestamp'] else None
+    } for log in logs]
+    
+    return logs_data
+
+# ============= EXISTING API ROUTES =============
+
+from fastapi import Form
+
 @app.post("/predict")
-async def predict(text: str = None, file: UploadFile = None, user_id: str = "anonymous"):
+async def predict(
+    text: Optional[str] = Form(None),
+    file: Optional[UploadFile] = File(None),
+    user_id: str = Form("anonymous"),
+    input_type: str = Form("text")  # "text", "audio_file", or "voice_recording"
+):
+    """
+    Universal prediction endpoint that handles:
+    1. Direct text input
+    2. Audio file upload (WAV, MP3, MP4, M4A, etc.)
+    3. Voice recording
+    """
     start_time = time.time()
     
-    if not (text or file) or (text and file):
-        raise HTTPException(status_code=400, detail="Provide either text or a file, but not both.")
+    if not text and not file:
+        raise HTTPException(status_code=400, detail="Please provide either text or an audio file.")
 
     input_text = ""
     transcribed_text = None
+    audio_duration = None
     
+    # Handle audio file or voice recording
     if file:
         try:
-            with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-                tmp_file.write(await file.read())
+            # Get file extension
+            file_extension = os.path.splitext(file.filename)[1] if file.filename else ".wav"
+            if not file_extension:
+                file_extension = ".wav"
+            
+            # Save uploaded file temporarily
+            with tempfile.NamedTemporaryFile(suffix=file_extension, delete=False) as tmp_file:
+                content = await file.read()
+                tmp_file.write(content)
                 tmp_file_path = tmp_file.name
 
+            # Transcribe audio using Whisper
             result = whisper_model.transcribe(tmp_file_path)
             input_text = result["text"]
             transcribed_text = input_text
+            audio_duration = result.get("duration", 0)
+            
+            # Clean up temporary file
             os.remove(tmp_file_path)
 
         except Exception as e:
-            raise HTTPException(status_code=500, detail=f"Error processing audio file: {e}")
+            raise HTTPException(status_code=500, detail=f"Error processing audio file: {str(e)}")
+    
+    # Handle direct text input
     elif text:
         input_text = text
 
+    # Validate input
     if not input_text.strip():
         predicted_label = "Needs Refinement"
         confidence = 0.5
     else:
         # Tokenize and predict
-        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True)
+        inputs = tokenizer(input_text, return_tensors="pt", padding=True, truncation=True, max_length=512)
         
         with torch.no_grad():
             outputs = model(**inputs)
@@ -205,9 +368,23 @@ async def predict(text: str = None, file: UploadFile = None, user_id: str = "ano
             (input_text, transcribed_text, predicted_label, confidence, processing_time, user_id)
             VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
-        """, (text, transcribed_text, predicted_label, confidence, processing_time, user_id))
+        """, (text if text else input_text, transcribed_text, predicted_label, confidence, processing_time, user_id))
         
         prediction_id = cursor.fetchone()[0]
+        conn.commit()
+        
+        # Also add to user_requests table (for Flask compatibility)
+        cursor.execute("""
+            INSERT INTO user_requests (input_text, predicted_label)
+            VALUES (%s, %s)
+        """, (input_text, predicted_label))
+        conn.commit()
+        
+        # Log the event
+        cursor.execute("""
+            INSERT INTO model_logs (event_type, event_details)
+            VALUES (%s, %s)
+        """, ("prediction", f"Type: {input_type}, Input: {input_text[:50]}..., Label: {predicted_label}"))
         conn.commit()
     
     # Update user API call count
@@ -219,13 +396,24 @@ async def predict(text: str = None, file: UploadFile = None, user_id: str = "ano
         """, (user_id, user_id))
         conn.commit()
 
-    return {
+    response = {
         "id": prediction_id,
-        "transcribed_text": transcribed_text,
         "predicted_label": predicted_label,
         "confidence": round(confidence, 4),
-        "processing_time": round(processing_time, 3)
+        "processing_time": round(processing_time, 3),
+        "input_type": input_type
     }
+    
+    # Add transcription details if audio was processed
+    if transcribed_text:
+        response["transcribed_text"] = transcribed_text
+        response["original_text"] = input_text
+        if audio_duration:
+            response["audio_duration"] = round(audio_duration, 2)
+    else:
+        response["input_text"] = input_text
+    
+    return response
 
 @app.get("/metrics")
 def get_metrics():
@@ -281,6 +469,7 @@ def get_metrics():
     })
     
     return metrics
+
 @app.post("/track-activity")
 async def track_activity(user_id: str, activity: str):
     """Track user activity in the database"""
@@ -484,7 +673,7 @@ async def simulate_training(config: TrainingConfig):
         training_state["is_training"] = False
 
 @app.get("/training/logs")
-def get_training_logs():
+def get_training_logs_api():
     """Get training logs from database"""
     with get_db_connection() as conn:
         cursor = conn.cursor(cursor_factory=RealDictCursor)
@@ -545,6 +734,7 @@ def get_overview():
             "uptime": "99.9%"
         }
     }
+
 
 if __name__ == "__main__":
     import uvicorn
