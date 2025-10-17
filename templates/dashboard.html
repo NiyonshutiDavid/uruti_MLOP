@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Uruti.Rw - Model Management</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -62,7 +61,6 @@
             text-decoration: none;
             font-weight: 500;
             transition: color 0.2s;
-            cursor: pointer;
         }
 
         .nav a:hover, .nav a.active {
@@ -75,19 +73,6 @@
             gap: 16px;
         }
 
-        .user-avatar {
-            width: 32px;
-            height: 32px;
-            border-radius: 50%;
-            background: #22c55e;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #0a0f0a;
-            font-weight: 600;
-            font-size: 14px;
-        }
-
         .container {
             display: flex;
             min-height: calc(100vh - 64px);
@@ -98,6 +83,22 @@
             background: #0d1a0d;
             border-right: 1px solid #1a331a;
             padding: 24px 0;
+        }
+
+        .back-btn {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #a1a1aa;
+            text-decoration: none;
+            padding: 12px 24px;
+            margin-bottom: 24px;
+            font-weight: 500;
+            transition: color 0.2s;
+        }
+
+        .back-btn:hover {
+            color: #22c55e;
         }
 
         .sidebar-menu {
@@ -117,7 +118,6 @@
             text-decoration: none;
             font-weight: 500;
             transition: all 0.2s;
-            cursor: pointer;
         }
 
         .sidebar-menu a:hover, .sidebar-menu a.active {
@@ -156,7 +156,7 @@
         .model-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: between;
             margin-bottom: 32px;
         }
 
@@ -213,6 +213,8 @@
 
         .quick-actions {
             margin-left: auto;
+            display: flex;
+            gap: 12px;
         }
 
         .btn {
@@ -247,6 +249,15 @@
 
         .btn-secondary:hover {
             background: #22c55e20;
+        }
+
+        .btn-chatbot {
+            background: #3b82f6;
+            color: white;
+        }
+
+        .btn-chatbot:hover {
+            background: #2563eb;
         }
 
         .card {
@@ -325,38 +336,16 @@
             font-size: 14px;
             font-weight: 500;
         }
-        .modal {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-        }
 
-        .modal-content {
-            background: #0d1a0d;
-            padding: 24px;
-            border-radius: 12px;
-            border: 1px solid #1a331a;
-            width: 400px;
-            max-width: 90%;
-        }
-
-        .modal h3 {
-            margin-bottom: 20px;
-            color: #22c55e;
-        }
         .chart-container {
             height: 300px;
             background: #0d1a0d;
             border: 1px solid #1a331a;
             border-radius: 8px;
-            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #a1a1aa;
             margin-bottom: 24px;
         }
 
@@ -381,6 +370,45 @@
 
         .users-table td {
             color: #e8f5e8;
+        }
+
+        .user-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #22c55e;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #0a0f0a;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .tab-nav {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 24px;
+            border-bottom: 1px solid #1a331a;
+        }
+
+        .tab-nav button {
+            background: none;
+            border: none;
+            color: #a1a1aa;
+            padding: 12px 0;
+            font-family: inherit;
+            letter-spacing: -0.6px;
+            font-weight: 500;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+
+        .tab-nav button.active,
+        .tab-nav button:hover {
+            color: #22c55e;
+            border-bottom-color: #22c55e;
         }
 
         .tab-content {
@@ -418,84 +446,136 @@
             transition: width 0.3s ease;
         }
 
-        .logs-container {
-            max-height: 400px;
-            overflow-y: auto;
-            background: #0a0f0a;
+        /* Chatbot Modal Styles */
+        .chatbot-modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(10, 15, 10, 0.9);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .chatbot-container {
+            background: #0d1a0d;
             border: 1px solid #1a331a;
-            border-radius: 6px;
-            padding: 16px;
-            font-family: 'Monaco', 'Menlo', monospace;
-            font-size: 12px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            height: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chatbot-header {
+            padding: 16px 24px;
+            border-bottom: 1px solid #1a331a;
+            display: flex;
+            justify-content: between;
+            align-items: center;
+        }
+
+        .chatbot-header h3 {
+            margin: 0;
             color: #22c55e;
         }
 
-        .integrations-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 16px;
-        }
-
-        .integration-card {
-            background: #0d1a0d;
-            border: 1px solid #1a331a;
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            transition: all 0.2s;
-        }
-
-        .integration-card:hover {
-            border-color: #22c55e;
-            transform: translateY(-2px);
-        }
-
-        .integration-icon {
-            width: 48px;
-            height: 48px;
-            background: #1a331a;
-            border-radius: 8px;
+        .chatbot-close {
+            background: none;
+            border: none;
+            color: #a1a1aa;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 12px;
-            font-size: 20px;
         }
 
-        .query-stats-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 16px;
+        .chatbot-close:hover {
+            color: #22c55e;
         }
 
-        .settings-form {
-            max-width: 600px;
+        .chatbot-messages {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
 
-        .form-group {
-            margin-bottom: 20px;
+        .message {
+            padding: 12px 16px;
+            border-radius: 8px;
+            max-width: 80%;
+            word-wrap: break-word;
         }
 
-        .form-label {
-            display: block;
-            margin-bottom: 8px;
+        .message.user {
+            background: #1a331a;
             color: #e8f5e8;
-            font-weight: 500;
+            align-self: flex-end;
         }
 
-        .form-input, .form-select {
-            width: 100%;
-            padding: 12px;
+        .message.bot {
+            background: #22c55e20;
+            color: #22c55e;
+            align-self: flex-start;
+            border: 1px solid #22c55e40;
+        }
+
+        .chatbot-input {
+            padding: 16px;
+            border-top: 1px solid #1a331a;
+            display: flex;
+            gap: 8px;
+        }
+
+        .chatbot-input input {
+            flex: 1;
             background: #0a0f0a;
             border: 1px solid #1a331a;
             border-radius: 6px;
+            padding: 12px;
             color: #e8f5e8;
             font-family: inherit;
         }
 
-        .form-input:focus, .form-select:focus {
+        .chatbot-input input:focus {
             outline: none;
             border-color: #22c55e;
+        }
+
+        .chatbot-input button {
+            background: #22c55e;
+            border: none;
+            border-radius: 6px;
+            padding: 12px 20px;
+            color: #0a0f0a;
+            font-weight: 500;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .chatbot-input button:hover {
+            background: #16a34a;
+        }
+
+        .chatbot-input button:disabled {
+            background: #1a331a;
+            color: #a1a1aa;
+            cursor: not-allowed;
+        }
+
+        .loading {
+            opacity: 0.7;
         }
 
         @media (max-width: 768px) {
@@ -516,6 +596,11 @@
             
             .quick-actions {
                 margin-left: 0;
+            }
+
+            .chatbot-container {
+                width: 95%;
+                height: 85%;
             }
         }
     </style>
@@ -546,16 +631,16 @@
                 <li><a href="#" data-tab="performance"><span class="icon">⚡</span> Performance</a></li>
                 <li><a href="#" data-tab="database"><span class="icon">🗄️</span> Database Info</a></li>
                 <li><a href="#" data-tab="users"><span class="icon">👥</span> Users</a></li>
-                <li><a href="#" data-tab="integrations"><span class="icon">🔌</span> Integrations</a></li>
-                <li><a href="#" data-tab="logs"><span class="icon">📋</span> Logs</a></li>
-                <li><a href="#" data-tab="query-stats"><span class="icon">🔍</span> Query Statistics</a></li>
-                <li><a href="#" data-tab="settings"><span class="icon">⚙️</span> Model Settings</a></li>
+                <li><a href="#"><span class="icon">🔌</span> Integrations</a></li>
+                <li><a href="#"><span class="icon">📋</span> Logs</a></li>
+                <li><a href="#"><span class="icon">🔍</span> Query Statistics</a></li>
+                <li><a href="#"><span class="icon">⚙️</span> Model Settings</a></li>
             </ul>
         </aside>
 
         <main class="main-content">
             <div class="breadcrumb">
-                <a href="#">David Niyonshuti</a> / <a href="#">ml-project</a> / <a href="#">model-v2.1</a> / <span id="current-tab">Overview</span>
+                <a href="#">David Niyonshuti</a> / <a href="#">ml-project</a> / <a href="#">model-v2.1</a> / Overview
             </div>
 
             <div class="model-header">
@@ -565,23 +650,23 @@
                         <h1>model-v2.1</h1>
                         <div class="model-status">
                             <span class="status-badge status-running">● Running</span>
-                            <span class="status-badge status-trained">● Last trained: <span id="last-trained-date">3 December 2024</span></span>
+                            <span class="status-badge status-trained" id="last-trained">● Last trained: Loading...</span>
                             <span>TensorFlow 2.15</span>
-                            <span>Accuracy: <span id="header-accuracy">94.2%</span></span>
+                            <span id="model-accuracy">Accuracy: Loading...</span>
                         </div>
                     </div>
                 </div>
                 <div class="quick-actions">
+                    <button class="btn btn-chatbot" onclick="openChatbot()">💬 Launch Chatbot</button>
                     <button class="btn btn-primary">Quick Deploy</button>
                 </div>
             </div>
 
-            <!-- Overview Tab -->
             <div id="overview" class="tab-content active">
                 <div class="card">
                     <h2>Get started with Uruti.Rw for TensorFlow®</h2>
                     <p style="color: #a1a1aa; margin-bottom: 16px;">Monitor, retrain, and manage your machine learning model with a comprehensive dashboard.</p>
-                    <button class="btn btn-primary">Get started</button>
+                    <button class="btn btn-primary" onclick="loadOverviewData()">Refresh Data</button>
                 </div>
 
                 <div class="card">
@@ -590,44 +675,43 @@
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Model URI</span>
-                                <span class="info-value" id="model-uri">tensorflow://model-v2.1.mlcloud.com:8080/predict</span>
+                                <span class="info-value">tensorflow://model-v2.1.mlcloud.com:8080/predict</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Name</span>
-                                <span class="info-value" id="model-name">model-v2.1</span>
+                                <span class="info-value">model-v2.1</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Framework</span>
-                                <span class="info-value" id="framework">TensorFlow 2.15</span>
+                                <span class="info-value">TensorFlow 2.15</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Type</span>
-                                <span class="info-value" id="model-type">Classification</span>
+                                <span class="info-value">Classification</span>
                             </div>
                         </div>
                         <div>
                             <div class="info-item">
                                 <span class="info-label">Last Training</span>
-                                <span class="info-value" id="last-training">3 December 2024, 14:23 UTC</span>
+                                <span class="info-value" id="last-training-time">Loading...</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Training Duration</span>
-                                <span class="info-value" id="training-duration">2h 34m</span>
+                                <span class="info-value" id="training-duration">Loading...</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Dataset Size</span>
-                                <span class="info-value" id="dataset-size">1.2M samples</span>
+                                <span class="info-value">1.2M samples</span>
                             </div>
                             <div class="info-item">
                                 <span class="info-label">Model Size</span>
-                                <span class="info-value" id="model-size">245 MB</span>
+                                <span class="info-value">245 MB</span>
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Model Training Tab -->
             <div id="retrain" class="tab-content">
                 <div class="card">
                     <h2>Model Retraining</h2>
@@ -653,38 +737,13 @@
                         </div>
                         <div class="info-item">
                             <span class="info-label">Epochs</span>
-                            <span class="info-value">10</span>
+                            <span class="info-value">100</span>
                         </div>
                     </div>
 
                     <div style="display: flex; gap: 16px;">
-                        <button class="btn btn-primary" id="startTrainingBtn" >Start Training</button>
-                        <button class="btn btn-secondary" id="configureTrainingBtn">Configure Training</button>
-                    </div>
-                    <div id="trainingConfigModal" class="modal" style="display: none;">
-                        <div class="modal-content">
-                            <h3>Training Configuration</h3>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Batch Size</label>
-                                <input type="number" id="batchSize" class="form-input" value="32" min="1" max="256">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Learning Rate</label>
-                                <input type="number" id="learningRate" class="form-input" value="0.001" step="0.0001" min="0.0001" max="0.1">
-                            </div>
-                            
-                            <div class="form-group">
-                                <label class="form-label">Epochs</label>
-                                <input type="number" id="epochs" class="form-input" value="10" min="1" max="100">
-                            </div>
-                            
-                            <div style="display: flex; gap: 16px; margin-top: 20px;">
-                                <button class="btn btn-primary" id="saveConfigBtn">Save Configuration</button>
-                                <button class="btn btn-secondary" id="cancelConfigBtn">Cancel</button>
-                            </div>
-                        </div>
+                        <button class="btn btn-primary" onclick="startTraining()" id="train-btn">Start Training</button>
+                        <button class="btn btn-secondary">Configure Training</button>
                     </div>
 
                     <div style="margin-top: 24px;">
@@ -697,341 +756,80 @@
                 </div>
             </div>
 
-            <!-- Metrics Tab -->
             <div id="metrics" class="tab-content">
-                <div class="metric-cards">
-                    <div class="metric-card">
-                        <div class="metric-value" id="metrics-accuracy">94.2%</div>
-                        <div class="metric-label">Accuracy</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="metrics-loss">0.058</div>
-                        <div class="metric-label">Loss</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="metrics-precision">92.7%</div>
-                        <div class="metric-label">Precision</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="metrics-recall">95.1%</div>
-                        <div class="metric-label">Recall</div>
+                <div class="metric-cards" id="metrics-cards">
+                    <!-- Metrics will be loaded dynamically -->
+                </div>
+
+                <div class="card">
+                    <h2>Training Metrics</h2>
+                    <div class="chart-container">
+                        <canvas id="metricsChart" width="100%" height="100%"></canvas>
                     </div>
                 </div>
 
                 <div class="card">
-                    <h2>Training Metrics Over Time</h2>
+                    <h2>Confusion Matrix</h2>
                     <div class="chart-container">
-                        <canvas id="metricsChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Label Distribution</h2>
-                    <div class="chart-container">
-                        <canvas id="labelChart"></canvas>
+                        <div>Confusion matrix visualization would be rendered here</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Performance Tab -->
             <div id="performance" class="tab-content">
-                <div class="metric-cards">
-                    <div class="metric-card">
-                        <div class="metric-value" id="perf-inference">45ms</div>
-                        <div class="metric-label">Avg Inference Time</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="perf-requests">1,247</div>
-                        <div class="metric-label">Requests/min</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="perf-uptime">99.9%</div>
-                        <div class="metric-label">Uptime</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="perf-memory">2.1GB</div>
-                        <div class="metric-label">Memory Usage</div>
-                    </div>
+                <div class="metric-cards" id="performance-cards">
+                    <!-- Performance metrics will be loaded dynamically -->
                 </div>
 
                 <div class="card">
                     <h2>Performance Over Time</h2>
                     <div class="chart-container">
-                        <canvas id="performanceChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>System Resources</h2>
-                    <div class="metric-cards">
-                        <div class="metric-card">
-                            <div class="metric-value" id="cpu-usage">45%</div>
-                            <div class="metric-label">CPU Usage</div>
-                        </div>
-                        <div class="metric-card">
-                            <div class="metric-value" id="gpu-usage">12%</div>
-                            <div class="metric-label">GPU Usage</div>
-                        </div>
+                        Performance charts would be rendered here
                     </div>
                 </div>
             </div>
 
-            <!-- Database Tab -->
             <div id="database" class="tab-content">
                 <div class="card">
                     <h2>Database Information</h2>
-                    <div class="info-grid">
-                        <div>
-                            <div class="info-item">
-                                <span class="info-label">Database Type</span>
-                                <span class="info-value" id="db-type">PostgreSQL 15.3</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Connection String</span>
-                                <span class="info-value" id="db-connection">postgresql://ml-db.cloud.com:5432/mldata</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Total Records</span>
-                                <span class="info-value" id="db-records">1,234,567</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Database Size</span>
-                                <span class="info-value" id="db-size">15.7 GB</span>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="info-item">
-                                <span class="info-label">Last Backup</span>
-                                <span class="info-value" id="db-backup">Today, 02:00 UTC</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Backup Size</span>
-                                <span class="info-value" id="db-backup-size">12.3 GB</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Tables</span>
-                                <span class="info-value" id="db-tables">23</span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Status</span>
-                                <span class="info-value" id="db-status" style="color: #22c55e;">● Online</span>
-                            </div>
-                        </div>
+                    <div class="info-grid" id="database-info">
+                        <!-- Database info will be loaded dynamically -->
                     </div>
                 </div>
             </div>
 
-            <!-- Users Tab -->
             <div id="users" class="tab-content">
                 <div class="card">
                     <h2>Application Users</h2>
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>User</th>
-                                <th>Email</th>
-                                <th>Role</th>
-                                <th>Last Access</th>
-                                <th>API Calls</th>
-                            </tr>
-                        </thead>
-                        <tbody id="users-tbody">
-                            <!-- Users will be loaded dynamically -->
-                        </tbody>
+                    <table class="users-table" id="users-table">
+                        <!-- Users will be loaded dynamically -->
                     </table>
-                </div>
-            </div>
-
-            <!-- Integrations Tab -->
-            <div id="integrations" class="tab-content">
-                <div class="card">
-                    <h2>Available Integrations</h2>
-                    <p style="color: #a1a1aa; margin-bottom: 24px;">Connect your model with external tools and services</p>
-                    
-                    <div class="integrations-grid">
-                        <div class="integration-card">
-                            <div class="integration-icon">🔬</div>
-                            <h3>wandb.ai</h3>
-                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Experiment tracking and model management</p>
-                            <button class="btn btn-primary" style="margin-top: 12px;">Connect</button>
-                        </div>
-                        
-                        <div class="integration-card">
-                            <div class="integration-icon">🎵</div>
-                            <h3>Whisper</h3>
-                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Speech-to-text processing</p>
-                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
-                        </div>
-                        
-                        <div class="integration-card">
-                            <div class="integration-icon">🔧</div>
-                            <h3>Tokenizers</h3>
-                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Text preprocessing and tokenization</p>
-                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
-                        </div>
-                        
-                        <div class="integration-card">
-                            <div class="integration-icon">⚡</div>
-                            <h3>TensorFlow</h3>
-                            <p style="color: #a1a1aa; font-size: 14px; margin: 8px 0;">Core ML framework</p>
-                            <button class="btn btn-secondary" style="margin-top: 12px;">Connected</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Logs Tab -->
-            <div id="logs" class="tab-content">
-                <div class="card">
-                    <h2>System Logs</h2>
-                    <div class="logs-container" id="system-logs">
-                        <div style="color: #22c55e;">[2024-12-03 14:23:15] INFO: Model v2.1 initialized successfully</div>
-                        <div style="color: #06b6d4;">[2024-12-03 14:23:16] DEBUG: Loading tokenizer from ./models/distilbert-base-uncased</div>
-                        <div style="color: #22c55e;">[2024-12-03 14:23:17] INFO: Database connection established</div>
-                        <div style="color: #f59e0b;">[2024-12-03 14:25:32] WARN: High memory usage detected: 2.1GB</div>
-                        <div style="color: #22c55e;">[2024-12-03 14:30:45] INFO: Prediction request processed - Label: Investment Ready</div>
-                        <div style="color: #06b6d4;">[2024-12-03 14:31:12] DEBUG: Model inference time: 45ms</div>
-                        <div style="color: #22c55e;">[2024-12-03 14:35:28] INFO: User authentication successful - david@uruti.rw</div>
-                        <div style="color: #22c55e;">[2024-12-03 14:42:33] INFO: Database backup completed successfully</div>
-                        <div style="color: #f59e0b;">[2024-12-03 14:45:18] WARN: Rate limit approaching for user: alice@uruti.rw</div>
-                        <div style="color: #22c55e;">[2024-12-03 14:50:22] INFO: Training checkpoint saved</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Training Logs</h2>
-                    <div class="logs-container" id="training-logs-display">
-                        <!-- Training logs will be loaded here -->
-
-                    </div>
-                </div>
-            </div>
-
-            <!-- Query Statistics Tab -->
-            <div id="query-stats" class="tab-content">
-                <div class="metric-cards">
-                    <div class="metric-card">
-                        <div class="metric-value" id="total-queries">15,247</div>
-                        <div class="metric-label">Total Queries</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="success-rate">98.7%</div>
-                        <div class="metric-label">Success Rate</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="avg-response">42ms</div>
-                        <div class="metric-label">Avg Response Time</div>
-                    </div>
-                    <div class="metric-card">
-                        <div class="metric-value" id="queries-today">1,832</div>
-                        <div class="metric-label">Queries Today</div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Query Distribution by Label</h2>
-                    <div class="chart-container">
-                        <canvas id="queryDistributionChart"></canvas>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Recent Predictions</h2>
-                    <table class="users-table">
-                        <thead>
-                            <tr>
-                                <th>Timestamp</th>
-                                <th>Input Type</th>
-                                <th>Predicted Label</th>
-                                <th>Confidence</th>
-                                <th>Processing Time</th>
-                            </tr>
-                        </thead>
-                        <tbody id="recent-predictions">
-                            <!-- Recent predictions will be loaded here -->
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Model Settings Tab -->
-            <div id="settings" class="tab-content">
-                <div class="card">
-                    <h2>Model Configuration</h2>
-                    <div class="settings-form">
-                        <div class="form-group">
-                            <label class="form-label">Model Name</label>
-                            <input type="text" class="form-input" value="model-v2.1" id="setting-model-name">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Framework Version</label>
-                            <select class="form-select" id="setting-framework">
-                                <option value="tensorflow-2.15">TensorFlow 2.15</option>
-                                <option value="tensorflow-2.14">TensorFlow 2.14</option>
-                                <option value="tensorflow-2.13">TensorFlow 2.13</option>
-                            </select>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Inference Timeout (ms)</label>
-                            <input type="number" class="form-input" value="5000" id="setting-timeout">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Batch Size</label>
-                            <input type="number" class="form-input" value="32" id="setting-batch-size">
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Auto-scaling</label>
-                            <select class="form-select" id="setting-autoscaling">
-                                <option value="enabled">Enabled</option>
-                                <option value="disabled">Disabled</option>
-                            </select>
-                        </div>
-                        
-                        <div style="display: flex; gap: 16px; margin-top: 24px;">
-                            <button class="btn btn-primary" onclick="saveSettings()">Save Settings</button>
-                            <button class="btn btn-secondary" onclick="resetSettings()">Reset to Default</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card">
-                    <h2>Model Endpoints</h2>
-                    <div class="info-item">
-                        <span class="info-label">Prediction Endpoint</span>
-                        <span class="info-value">POST /predict</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Health Check</span>
-                        <span class="info-value">GET /health</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">Metrics Endpoint</span>
-                        <span class="info-value">GET /metrics</span>
-                    </div>
-                    <div class="info-item">
-                        <span class="info-label">API Version</span>
-                        <span class="info-value">v2.1.0</span>
-                    </div>
                 </div>
             </div>
         </main>
     </div>
 
+    <!-- Chatbot Modal -->
+    <div class="chatbot-modal" id="chatbot-modal">
+        <div class="chatbot-container">
+            <div class="chatbot-header">
+                <h3>Uruti.Rw Startup Advisor</h3>
+                <button class="chatbot-close" onclick="closeChatbot()">×</button>
+            </div>
+            <div class="chatbot-messages" id="chatbot-messages">
+                <div class="message bot">
+                    Hello! I'm your startup advisory chatbot. I can help you with business validation, investment readiness, and refinement strategies. How can I assist you today?
+                </div>
+            </div>
+            <div class="chatbot-input">
+                <input type="text" id="chatbot-input" placeholder="Ask about startup advice..." onkeypress="handleChatbotInput(event)">
+                <button id="chatbot-send" onclick="sendChatbotMessage()">Send</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // Configuration
-        const API_BASE = 'http://localhost:8000';
-        
-        // Global variables
-        let trainingInProgress = false;
-        let metricsChart = null;
-        let performanceChart = null;
-        let labelChart = null;
-        let queryDistributionChart = null;
+        const API_BASE = 'http://localhost:8000'; // Update this to your FastAPI server URL
 
         // Tools dropdown functionality
         function showTools(e) {
@@ -1057,96 +855,28 @@
                 const tabContent = document.getElementById(tabId);
                 if (tabContent) {
                     tabContent.classList.add('active');
-                    // Update breadcrumb
-                    document.getElementById('current-tab').textContent = getTabDisplayName(tabId);
-                    // Load data when tab is opened
-                    loadTabData(tabId);
+                    
+                    // Load data for the selected tab
+                    switch(tabId) {
+                        case 'overview':
+                            loadOverviewData();
+                            break;
+                        case 'metrics':
+                            loadMetricsData();
+                            break;
+                        case 'performance':
+                            loadPerformanceData();
+                            break;
+                        case 'database':
+                            loadDatabaseInfo();
+                            break;
+                        case 'users':
+                            loadUsersData();
+                            break;
+                    }
                 }
             });
         });
-
-        function getTabDisplayName(tabId) {
-            const displayNames = {
-                'overview': 'Overview',
-                'retrain': 'Model Training',
-                'metrics': 'Metrics',
-                'performance': 'Performance',
-                'database': 'Database Info',
-                'users': 'Users',
-                'integrations': 'Integrations',
-                'logs': 'Logs',
-                'query-stats': 'Query Statistics',
-                'settings': 'Model Settings'
-            };
-            return displayNames[tabId] || 'Unknown';
-        }
-
-        // Load data for specific tabs
-        async function loadTabData(tabId) {
-            try {
-                switch(tabId) {
-                    case 'overview':
-                        await loadOverviewData();
-                        break;
-                    case 'metrics':
-                        await loadMetricsData();
-                        break;
-                    case 'performance':
-                        await loadPerformanceData();
-                        break;
-                    case 'database':
-                        await loadDatabaseData();
-                        break;
-                    case 'users':
-                        await loadUsersData();
-                        break;
-                    case 'retrain':
-                        await loadTrainingStatus();
-                        break;
-                    case 'logs':
-                        await loadLogsData();
-                        break;
-                    case 'query-stats':
-                        await loadQueryStatsData();
-                        break;
-                }
-            } catch (error) {
-                console.error(`Error loading ${tabId} data:`, error);
-                // Show fallback data if API is not available
-                loadFallbackData(tabId);
-            }
-        }
-
-        // Fallback data when API is not available
-        function loadFallbackData(tabId) {
-            switch(tabId) {
-                case 'metrics':
-                    updateMetricsDisplay({
-                        accuracy: 0.942,
-                        precision_score: 0.927,
-                        recall_score: 0.951,
-                        loss_value: 0.058
-                    });
-                    createMetricsChart();
-                    createLabelChart();
-                    break;
-                case 'performance':
-                    updatePerformanceDisplay({
-                        avg_inference_time: 45,
-                        requests_per_minute: 1247,
-                        uptime: 99.9,
-                        memory_usage: "2.1GB"
-                    });
-                    createPerformanceChart();
-                    break;
-                case 'users':
-                    loadFallbackUsers();
-                    break;
-                case 'query-stats':
-                    loadFallbackQueryStats();
-                    break;
-            }
-        }
 
         // Load overview data
         async function loadOverviewData() {
@@ -1154,15 +884,10 @@
                 const response = await fetch(`${API_BASE}/overview`);
                 const data = await response.json();
                 
-                // Update model info
-                const modelInfo = data.model_info;
-                document.getElementById('model-name').textContent = modelInfo.name;
-                document.getElementById('last-trained-date').textContent = new Date(modelInfo.last_training).toLocaleDateString();
-                document.getElementById('header-accuracy').textContent = `${(modelInfo.accuracy * 100).toFixed(1)}%`;
-                document.getElementById('last-training').textContent = new Date(modelInfo.last_training).toLocaleString();
-                document.getElementById('training-duration').textContent = modelInfo.training_duration;
-                document.getElementById('model-size').textContent = modelInfo.model_size;
-                
+                document.getElementById('last-trained').textContent = `● Last trained: ${new Date(data.model_info.last_training).toLocaleDateString()}`;
+                document.getElementById('model-accuracy').textContent = `Accuracy: ${(data.model_info.accuracy * 100).toFixed(1)}%`;
+                document.getElementById('last-training-time').textContent = new Date(data.model_info.last_training).toLocaleString();
+                document.getElementById('training-duration').textContent = data.model_info.training_duration;
             } catch (error) {
                 console.error('Error loading overview data:', error);
             }
@@ -1173,20 +898,29 @@
             try {
                 const response = await fetch(`${API_BASE}/metrics`);
                 const data = await response.json();
-                updateMetricsDisplay(data);
-                createMetricsChart();
-                createLabelChart(data.label_distribution);
+                
+                const metricsCards = document.getElementById('metrics-cards');
+                metricsCards.innerHTML = `
+                    <div class="metric-card">
+                        <div class="metric-value">${(data.accuracy * 100).toFixed(1)}%</div>
+                        <div class="metric-label">Accuracy</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${data.loss_value.toFixed(3)}</div>
+                        <div class="metric-label">Loss</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${(data.precision_score * 100).toFixed(1)}%</div>
+                        <div class="metric-label">Precision</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${(data.recall_score * 100).toFixed(1)}%</div>
+                        <div class="metric-label">Recall</div>
+                    </div>
+                `;
             } catch (error) {
                 console.error('Error loading metrics data:', error);
-                loadFallbackData('metrics');
             }
-        }
-
-        function updateMetricsDisplay(data) {
-            document.getElementById('metrics-accuracy').textContent = `${(data.accuracy * 100).toFixed(1)}%`;
-            document.getElementById('metrics-loss').textContent = data.loss_value ? data.loss_value.toFixed(3) : '0.058';
-            document.getElementById('metrics-precision').textContent = `${(data.precision_score * 100).toFixed(1)}%`;
-            document.getElementById('metrics-recall').textContent = `${(data.recall_score * 100).toFixed(1)}%`;
         }
 
         // Load performance data
@@ -1194,39 +928,78 @@
             try {
                 const response = await fetch(`${API_BASE}/performance`);
                 const data = await response.json();
-                updatePerformanceDisplay(data);
-                createPerformanceChart();
+                
+                const performanceCards = document.getElementById('performance-cards');
+                performanceCards.innerHTML = `
+                    <div class="metric-card">
+                        <div class="metric-value">${data.avg_inference_time}ms</div>
+                        <div class="metric-label">Avg Inference Time</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${data.requests_per_minute}</div>
+                        <div class="metric-label">Requests/min</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${data.uptime}%</div>
+                        <div class="metric-label">Uptime</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">${data.memory_usage}</div>
+                        <div class="metric-label">Memory Usage</div>
+                    </div>
+                `;
             } catch (error) {
                 console.error('Error loading performance data:', error);
-                loadFallbackData('performance');
             }
         }
 
-        function updatePerformanceDisplay(data) {
-            document.getElementById('perf-inference').textContent = `${data.avg_inference_time}ms`;
-            document.getElementById('perf-requests').textContent = data.requests_per_minute.toLocaleString();
-            document.getElementById('perf-uptime').textContent = `${data.uptime}%`;
-            document.getElementById('perf-memory').textContent = data.memory_usage;
-            document.getElementById('cpu-usage').textContent = data.cpu_usage || '45%';
-            document.getElementById('gpu-usage').textContent = data.gpu_usage || '12%';
-        }
-
-        // Load database data
-        async function loadDatabaseData() {
+        // Load database info
+        async function loadDatabaseInfo() {
             try {
                 const response = await fetch(`${API_BASE}/database-info`);
                 const data = await response.json();
                 
-                document.getElementById('db-type').textContent = data.database_type;
-                document.getElementById('db-connection').textContent = data.connection_string;
-                document.getElementById('db-records').textContent = data.total_records.toLocaleString();
-                document.getElementById('db-size').textContent = data.database_size;
-                document.getElementById('db-backup').textContent = data.last_backup;
-                document.getElementById('db-backup-size').textContent = data.backup_size;
-                document.getElementById('db-tables').textContent = data.tables.toString();
-                document.getElementById('db-status').innerHTML = `● ${data.status}`;
+                const databaseInfo = document.getElementById('database-info');
+                databaseInfo.innerHTML = `
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">Database Type</span>
+                            <span class="info-value">${data.database_type}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Connection String</span>
+                            <span class="info-value">${data.connection_string}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Total Records</span>
+                            <span class="info-value">${data.total_records.toLocaleString()}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Database Size</span>
+                            <span class="info-value">${data.database_size}</span>
+                        </div>
+                    </div>
+                    <div>
+                        <div class="info-item">
+                            <span class="info-label">Last Backup</span>
+                            <span class="info-value">${data.last_backup}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Backup Size</span>
+                            <span class="info-value">${data.backup_size}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Tables</span>
+                            <span class="info-value">${data.tables}</span>
+                        </div>
+                        <div class="info-item">
+                            <span class="info-label">Status</span>
+                            <span class="info-value" style="color: #22c55e;">● ${data.status}</span>
+                        </div>
+                    </div>
+                `;
             } catch (error) {
-                console.error('Error loading database data:', error);
+                console.error('Error loading database info:', error);
             }
         }
 
@@ -1235,1102 +1008,225 @@
             try {
                 const response = await fetch(`${API_BASE}/users`);
                 const users = await response.json();
-                displayUsers(users);
+                
+                const usersTable = document.getElementById('users-table');
+                usersTable.innerHTML = `
+                    <thead>
+                        <tr>
+                            <th>User</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Last Access</th>
+                            <th>API Calls</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 12px;">
+                                        <div class="user-avatar">${user.name.charAt(0)}</div>
+                                        ${user.name}
+                                    </div>
+                                </td>
+                                <td>${user.email}</td>
+                                <td>${user.role}</td>
+                                <td>${user.last_access_formatted}</td>
+                                <td>${user.api_calls}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                `;
             } catch (error) {
                 console.error('Error loading users data:', error);
-                loadFallbackUsers();
             }
         }
 
-        function displayUsers(users) {
-            const tbody = document.getElementById('users-tbody');
-            tbody.innerHTML = '';
+        // Training simulation
+        let trainingInProgress = false;
+
+        async function startTraining() {
+            if (trainingInProgress) return;
             
-            users.forEach(user => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>
-                        <div style="display: flex; align-items: center; gap: 12px;">
-                            <div class="user-avatar">${user.name.split(' ').map(n => n[0]).join('')}</div>
-                            ${user.name}
-                        </div>
-                    </td>
-                    <td>${user.email}</td>
-                    <td>${user.role}</td>
-                    <td>${user.last_access_formatted}</td>
-                    <td>${user.api_calls.toLocaleString()}</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        function loadFallbackUsers() {
-            const fallbackUsers = [
-                { name: "David Niyonshuti", email: "david@uruti.rw", role: "Admin", last_access_formatted: "2 hours ago", api_calls: 1247 },
-                { name: "Alice Smith", email: "alice@uruti.rw", role: "Developer", last_access_formatted: "1 day ago", api_calls: 843 },
-                { name: "Bob Johnson", email: "bob@uruti.rw", role: "Analyst", last_access_formatted: "3 days ago", api_calls: 156 },
-                { name: "Carol Davis", email: "carol@uruti.rw", role: "Viewer", last_access_formatted: "1 week ago", api_calls: 23 }
-            ];
-            displayUsers(fallbackUsers);
-        }
-
-        // Load training status
-        async function loadTrainingStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/training/status`);
-                const status = await response.json();
-                
-                const progressBar = document.getElementById('training-progress');
-                const progressText = document.getElementById('progress-text');
-                const trainingLog = document.getElementById('training-log');
-                
-                progressBar.style.width = `${status.progress}%`;
-                
-                if (status.is_training) {
-                    trainingInProgress = true;
-                    progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-                    pollTrainingStatus();
-                } else if (status.progress === 100) {
-                    progressText.textContent = 'Training completed successfully!';
-            } else {
-                progressText.textContent = 'Ready to start training';
-            }
-            
-            if (status.logs && status.logs.length > 0) {
-                trainingLog.innerHTML = status.logs.join('<br>');
-                trainingLog.scrollTop = trainingLog.scrollHeight;
-            }
-        } catch (error) {
-            console.error('Error loading training status:', error);
-        }
-        }
-
-        function simulateTraining() {
             trainingInProgress = true;
+            const trainBtn = document.getElementById('train-btn');
             const progressBar = document.getElementById('training-progress');
             const progressText = document.getElementById('progress-text');
             const trainingLog = document.getElementById('training-log');
             
-            let progress = 0;
-            let epoch = 1;
-            const maxEpochs = trainingConfig.epochs || 10; // Use configured epochs
+            trainBtn.disabled = true;
+            trainBtn.textContent = 'Training...';
             
-            trainingLog.innerHTML = 'Starting training...<br>';
-            
-            const trainingInterval = setInterval(() => {
-                progress += Math.random() * 15;
-                epoch = Math.ceil((progress / 100) * maxEpochs);
+            try {
+                // Start training via API
+                const response = await fetch(`${API_BASE}/training/start`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        batch_size: 32,
+                        learning_rate: 0.001,
+                        epochs: 10
+                    })
+                });
                 
-                if (progress >= 100) {
-                    progress = 100;
-                    clearInterval(trainingInterval);
-                    trainingInProgress = false;
-                    progressText.textContent = 'Training completed successfully!';
-                    trainingLog.innerHTML += `Training completed! Final accuracy: ${(0.5 + Math.random() * 0.5).toFixed(2)}%<br>`;
-                    trainingLog.innerHTML += `Model saved successfully.<br>`;
-                } else {
-                    progressText.textContent = `Training in progress... Epoch ${epoch}/${maxEpochs} (${Math.round(progress)}%)`;
-                    
-                    // Add random training log entries
-                    if (Math.random() > 0.7) {
-                        const logEntries = [
-                            `Epoch ${epoch}/${maxEpochs} - Loss: ${(0.5 - (progress/100) * 0.4).toFixed(4)} - Accuracy: ${(0.5 + (progress/100) * 0.4).toFixed(4)}`,
-                            `Learning rate: ${trainingConfig.learning_rate.toFixed(6)}`,
-                            `Batch size: ${trainingConfig.batch_size}`
-                        ];
+                if (!response.ok) {
+                    throw new Error('Failed to start training');
+                }
+                
+                trainingLog.innerHTML = 'Training started via API...<br>';
+                
+                // Poll for training progress
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const statusResponse = await fetch(`${API_BASE}/training/status`);
+                        const status = await statusResponse.json();
                         
-                        trainingLog.innerHTML += logEntries[Math.floor(Math.random() * logEntries.length)] + '<br>';
-                        trainingLog.scrollTop = trainingLog.scrollHeight;
+                        progressBar.style.width = status.progress + '%';
+                        progressText.textContent = `Training in progress... Epoch ${status.current_epoch}/10 (${Math.round(status.progress)}%)`;
+                        
+                        // Update logs
+                        if (status.logs && status.logs.length > 0) {
+                            trainingLog.innerHTML = status.logs.slice(-10).join('<br>') + '<br>';
+                            trainingLog.scrollTop = trainingLog.scrollHeight;
+                        }
+                        
+                        if (!status.is_training && status.progress >= 100) {
+                            clearInterval(pollInterval);
+                            trainingInProgress = false;
+                            trainBtn.disabled = false;
+                            trainBtn.textContent = 'Start Training';
+                            progressText.textContent = 'Training completed successfully!';
+                            
+                            // Refresh metrics
+                            loadMetricsData();
+                            loadOverviewData();
+                        }
+                    } catch (error) {
+                        console.error('Error polling training status:', error);
                     }
-                }
+                }, 2000);
                 
-                progressBar.style.width = progress + '%';
-            }, 500);
+            } catch (error) {
+                console.error('Error starting training:', error);
+                trainingLog.innerHTML += `Training failed: ${error.message}<br>`;
+                trainingInProgress = false;
+                trainBtn.disabled = false;
+                trainBtn.textContent = 'Start Training';
+            }
         }
-        // Settings functionality
-        function saveSettings() {
-            const settings = {
-                model_name: document.getElementById('setting-model-name').value,
-                framework: document.getElementById('setting-framework').value,
-                timeout: document.getElementById('setting-timeout').value,
-                batch_size: document.getElementById('setting-batch-size').value,
-                autoscaling: document.getElementById('setting-autoscaling').value
-            };
+
+        // Chatbot functionality
+        function openChatbot() {
+            document.getElementById('chatbot-modal').style.display = 'flex';
+        }
+
+        function closeChatbot() {
+            document.getElementById('chatbot-modal').style.display = 'none';
+        }
+
+        function handleChatbotInput(event) {
+            if (event.key === 'Enter') {
+                sendChatbotMessage();
+            }
+        }
+
+        async function sendChatbotMessage() {
+            const input = document.getElementById('chatbot-input');
+            const message = input.value.trim();
+            const sendBtn = document.getElementById('chatbot-send');
+            const messagesContainer = document.getElementById('chatbot-messages');
             
-            // In a real application, this would send the settings to the API
-            console.log('Saving settings:', settings);
-            alert('Settings saved successfully!');
-        }
-
-        function resetSettings() {
-            document.getElementById('setting-model-name').value = 'model-v2.1';
-            document.getElementById('setting-framework').value = 'tensorflow-2.15';
-            document.getElementById('setting-timeout').value = '5000';
-            document.getElementById('setting-batch-size').value = '32';
-            document.getElementById('setting-autoscaling').value = 'enabled';
-            alert('Settings reset to default values!');
-        }
-
-        // Auto-refresh functionality
-        function startAutoRefresh() {
-            setInterval(() => {
-                const activeTab = document.querySelector('.tab-content.active');
-                if (activeTab) {
-                    const tabId = activeTab.id;
-                    // Only refresh certain tabs to avoid disrupting user interactions
-                    if (['overview', 'metrics', 'performance'].includes(tabId)) {
-                        loadTabData(tabId);
-                    }
-                }
-            }, 30000); // Refresh every 30 seconds
-        }
-
-        // Real-time updates simulation
-        function simulateRealTimeUpdates() {
-            setInterval(() => {
-                // Update random metrics slightly
-                const accuracy = document.getElementById('metrics-accuracy');
-                if (accuracy) {
-                    const currentValue = parseFloat(accuracy.textContent);
-                    const newValue = currentValue + (Math.random() - 0.5) * 0.1;
-                    accuracy.textContent = `${Math.max(90, Math.min(95, newValue)).toFixed(1)}%`;
-                }
-                
-                const inference = document.getElementById('perf-inference');
-                if (inference) {
-                    const currentValue = parseFloat(inference.textContent);
-                    const newValue = currentValue + (Math.random() - 0.5) * 5;
-                    inference.textContent = `${Math.max(30, Math.min(60, newValue)).toFixed(0)}ms`;
-                }
-                
-                const requests = document.getElementById('perf-requests');
-                if (requests) {
-                    const currentValue = parseInt(requests.textContent.replace(',', ''));
-                    const newValue = currentValue + Math.floor((Math.random() - 0.5) * 100);
-                    requests.textContent = Math.max(1000, Math.min(2000, newValue)).toLocaleString();
-                }
-            }, 5000); // Update every 5 seconds
-        }
-
-        // Keyboard shortcuts
-        document.addEventListener('keydown', (e) => {
-            if (e.ctrlKey || e.metaKey) {
-                switch(e.key) {
-                    case '1':
-                        e.preventDefault();
-                        document.querySelector('[data-tab="overview"]').click();
-                        break;
-                    case '2':
-                        e.preventDefault();
-                        document.querySelector('[data-tab="metrics"]').click();
-                        break;
-                    case '3':
-                        e.preventDefault();
-                        document.querySelector('[data-tab="performance"]').click();
-                        break;
-                    case 'r':
-                        e.preventDefault();
-                        location.reload();
-                        break;
-                }
-            }
-        });
-
-        // Tooltip functionality
-        function addTooltips() {
-            const tooltipElements = document.querySelectorAll('[title]');
-            tooltipElements.forEach(element => {
-                element.addEventListener('mouseenter', (e) => {
-                    const tooltip = document.createElement('div');
-                    tooltip.className = 'tooltip';
-                    tooltip.textContent = e.target.getAttribute('title');
-                    tooltip.style.cssText = `
-                        position: fixed;
-                        background: #0d1a0d;
-                        color: #e8f5e8;
-                        padding: 8px 12px;
-                        border-radius: 6px;
-                        border: 1px solid #1a331a;
-                        font-size: 12px;
-                        z-index: 1000;
-                        pointer-events: none;
-                    `;
-                    document.body.appendChild(tooltip);
-                    
-                    const rect = e.target.getBoundingClientRect();
-                    tooltip.style.left = rect.left + 'px';
-                    tooltip.style.top = (rect.top - tooltip.offsetHeight - 8) + 'px';
-                });
-                
-                element.addEventListener('mouseleave', () => {
-                    const tooltip = document.querySelector('.tooltip');
-                    if (tooltip) {
-                        tooltip.remove();
-                    }
-                });
-            });
-        }
-
-        // Error handling and retry mechanism
-        async function fetchWithRetry(url, options = {}, retries = 3) {
-            for (let i = 0; i < retries; i++) {
-                try {
-                    const response = await fetch(url, options);
-                    if (response.ok) {
-                        return response;
-                    }
-                    throw new Error(`HTTP ${response.status}`);
-                } catch (error) {
-                    if (i === retries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-                }
-            }
-        }
-
-        // Connection status indicator
-        function updateConnectionStatus() {
-            const statusIndicator = document.createElement('div');
-            statusIndicator.id = 'connection-status';
-            statusIndicator.style.cssText = `
-                position: fixed;
-                top: 16px;
-                right: 16px;
-                padding: 8px 16px;
-                border-radius: 6px;
-                font-size: 12px;
-                font-weight: 500;
-                z-index: 1000;
-                transition: all 0.3s ease;
+            if (!message) return;
+            
+            // Add user message
+            messagesContainer.innerHTML += `
+                <div class="message user">${message}</div>
             `;
-            document.body.appendChild(statusIndicator);
             
-            async function checkConnection() {
-                try {
-                    await fetch(`${API_BASE}/`, { method: 'HEAD' });
-                    statusIndicator.textContent = '● API Connected';
-                    statusIndicator.style.background = '#16a34a20';
-                    statusIndicator.style.color = '#22c55e';
-                    statusIndicator.style.border = '1px solid #22c55e';
-                } catch (error) {
-                    statusIndicator.textContent = '● API Disconnected';
-                    statusIndicator.style.background = '#dc262620';
-                    statusIndicator.style.color = '#ef4444';
-                    statusIndicator.style.border = '1px solid #ef4444';
+            // Clear input and disable
+            input.value = '';
+            sendBtn.disabled = true;
+            input.disabled = true;
+            
+            // Add loading indicator
+            messagesContainer.innerHTML += `
+                <div class="message bot loading">Thinking...</div>
+            `;
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            try {
+                // Send message to prediction API
+                const formData = new FormData();
+                formData.append('text', message);
+                formData.append('user_id', 'dashboard_user');
+                formData.append('input_type', 'text');
+                
+                const response = await fetch(`${API_BASE}/predict`, {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                // Remove loading indicator
+                const loadingMessage = messagesContainer.querySelector('.loading');
+                if (loadingMessage) {
+                    loadingMessage.remove();
                 }
+                
+                // Add bot response
+                let botResponse = `Based on your query, I'd categorize this as: **${data.predicted_label}**\n\n`;
+                
+                // Add category-specific advice
+                switch(data.predicted_label) {
+                    case 'Mentorship Needed':
+                        botResponse += "For early-stage startups, I recommend:\n• Conduct thorough market research\n• Develop a minimum viable product (MVP)\n• Seek mentorship from experienced entrepreneurs\n• Validate your business model with potential customers";
+                        break;
+                    case 'Investment Ready':
+                        botResponse += "Great! For investment readiness:\n• Prepare a comprehensive pitch deck\n• Refine your financial projections\n• Document your traction and milestones\n• Identify suitable investors for your stage and industry";
+                        break;
+                    case 'Needs Refinement':
+                        botResponse += "For business refinement:\n• Analyze customer feedback systematically\n• Review your value proposition\n• Consider pivoting if necessary\n• Strengthen your team and operations";
+                        break;
+                    default:
+                        botResponse += "I'd be happy to provide more specific advice. Could you tell me more about your current challenges or goals?";
+                }
+                
+                botResponse += `\n\n(Confidence: ${(data.confidence * 100).toFixed(1)}%)`;
+                
+                messagesContainer.innerHTML += `
+                    <div class="message bot">${botResponse.replace(/\n/g, '<br>')}</div>
+                `;
+                
+            } catch (error) {
+                console.error('Error getting chatbot response:', error);
+                
+                // Remove loading indicator
+                const loadingMessage = messagesContainer.querySelector('.loading');
+                if (loadingMessage) {
+                    loadingMessage.remove();
+                }
+                
+                // Add error message
+                messagesContainer.innerHTML += `
+                    <div class="message bot">I apologize, but I'm having trouble processing your request right now. Please try again later.</div>
+                `;
             }
             
-            checkConnection();
-            setInterval(checkConnection, 10000); // Check every 10 seconds
+            // Re-enable input
+            sendBtn.disabled = false;
+            input.disabled = false;
+            input.focus();
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
         }
 
-        // Export functionality
-        function exportData(type) {
-            const data = {
-                timestamp: new Date().toISOString(),
-                type: type,
-                data: {}
-            };
-            
-            switch(type) {
-                case 'metrics':
-                    data.data = {
-                        accuracy: document.getElementById('metrics-accuracy').textContent,
-                        loss: document.getElementById('metrics-loss').textContent,
-                        precision: document.getElementById('metrics-precision').textContent,
-                        recall: document.getElementById('metrics-recall').textContent
-                    };
-                    break;
-                case 'performance':
-                    data.data = {
-                        inference_time: document.getElementById('perf-inference').textContent,
-                        requests_per_minute: document.getElementById('perf-requests').textContent,
-                        uptime: document.getElementById('perf-uptime').textContent,
-                        memory_usage: document.getElementById('perf-memory').textContent
-                    };
-                    break;
-            }
-            
-            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `uruti-${type}-${new Date().toISOString().split('T')[0]}.json`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-        }
-
-        // Initialize dashboard
-        window.addEventListener('load', () => {
-            loadTabData('overview');
-            startAutoRefresh();
-            simulateRealTimeUpdates();
-            addTooltips();
-            updateConnectionStatus();
-            
-            // Add export buttons to relevant tabs
-            const exportButton = document.createElement('button');
-            exportButton.className = 'btn btn-secondary';
-            exportButton.style.cssText = 'margin-left: 16px; font-size: 12px; padding: 6px 12px;';
-            exportButton.textContent = 'Export Data';
-            exportButton.onclick = () => {
-                const activeTab = document.querySelector('.tab-content.active');
-                if (activeTab) {
-                    exportData(activeTab.id);
-                }
-            };
-            
-            document.querySelector('.quick-actions').appendChild(exportButton);
-            
-            console.log('🚀 Uruti.Rw Dashboard initialized successfully!');
-            console.log('💡 Keyboard shortcuts:');
-            console.log('   Ctrl/Cmd + 1: Overview');
-            console.log('   Ctrl/Cmd + 2: Metrics');
-            console.log('   Ctrl/Cmd + 3: Performance');
-            console.log('   Ctrl/Cmd + R: Refresh');
-        });
-
-        // Handle browser back/forward buttons
-        window.addEventListener('popstate', (e) => {
-            if (e.state && e.state.tab) {
-                document.querySelector(`[data-tab="${e.state.tab}"]`).click();
-            }
-        });
-
-        // Push state when tab changes
-        document.querySelectorAll('[data-tab]').forEach(link => {
-            link.addEventListener('click', (e) => {
-                const tabId = link.getAttribute('data-tab');
-                history.pushState({ tab: tabId }, '', `#${tabId}`);
-            });
-        });
-
-        // Load tab from URL hash on page load
-        window.addEventListener('load', () => {
-            const hash = window.location.hash.slice(1);
-            if (hash) {
-                const tabLink = document.querySelector(`[data-tab="${hash}"]`);
-                if (tabLink) {
-                    tabLink.click();
-                }
-            }
+        // Initialize dashboard on load
+        document.addEventListener('DOMContentLoaded', function() {
+            loadOverviewData();
+            loadMetricsData();
         });
     </script>
 </body>
 </html>
-    <script>
-        // Load training status
-        async function loadTrainingStatus() {
-            try {
-                const response = await fetch(`${API_BASE}/training/status`);
-                const status = await response.json();
-                
-                const progressBar = document.getElementById('training-progress');
-                const progressText = document.getElementById('progress-text');
-                const trainingLog = document.getElementById('training-log');
-                
-                progressBar.style.width = `${status.progress}%`;
-                
-                if (status.is_training) {
-                    progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-                } else if (status.progress === 100) {
-                    progressText.textContent = 'Training completed successfully!';
-                } else {
-                    progressText.textContent = 'Ready to start training';
-                }
-                
-                if (status.logs && status.logs.length > 0) {
-                    trainingLog.innerHTML = status.logs.join('<br>');
-                    trainingLog.scrollTop = trainingLog.scrollHeight;
-                }
-            } catch (error) {
-                console.error('Error loading training status:', error);
-            }
-        }
-
-        // Load logs data
-        async function loadLogsData() {
-            try {
-                const response = await fetch(`${API_BASE}/training/logs`);
-                const logs = await response.json();
-                
-                const trainingLogsDisplay = document.getElementById('training-logs-display');
-                trainingLogsDisplay.innerHTML = '';
-                
-                logs.forEach(log => {
-                    const logEntry = document.createElement('div');
-                    logEntry.style.color = '#22c55e';
-                    logEntry.innerHTML = `[${new Date(log.created_at).toLocaleString()}] ${log.message}`;
-                    trainingLogsDisplay.appendChild(logEntry);
-                });
-            } catch (error) {
-                console.error('Error loading logs data:', error);
-            }
-        }
-
-        // Load query statistics data
-        async function loadQueryStatsData() {
-            try {
-                const response = await fetch(`${API_BASE}/metrics`);
-                const data = await response.json();
-                
-                document.getElementById('total-queries').textContent = data.total_predictions.toLocaleString();
-                document.getElementById('success-rate').textContent = '98.7%';
-                document.getElementById('avg-response').textContent = `${Math.round(data.avg_processing_time * 1000)}ms`;
-                document.getElementById('queries-today').textContent = Math.round(data.total_predictions * 0.12).toLocaleString();
-                
-                createQueryDistributionChart(data.label_distribution);
-                loadRecentPredictions();
-            } catch (error) {
-                console.error('Error loading query stats data:', error);
-                loadFallbackQueryStats();
-            }
-        }
-
-        function loadFallbackQueryStats() {
-            document.getElementById('total-queries').textContent = '15,247';
-            document.getElementById('success-rate').textContent = '98.7%';
-            document.getElementById('avg-response').textContent = '42ms';
-            document.getElementById('queries-today').textContent = '1,832';
-            
-            const fallbackDistribution = [
-                { predicted_label: 'Investment Ready', count: 8547 },
-                { predicted_label: 'Mentorship Needed', count: 4321 },
-                { predicted_label: 'Needs Refinement', count: 2379 }
-            ];
-            createQueryDistributionChart(fallbackDistribution);
-            loadFallbackRecentPredictions();
-        }
-
-        function loadRecentPredictions() {
-            // This would typically fetch from an API endpoint
-            loadFallbackRecentPredictions();
-        }
-
-        function loadFallbackRecentPredictions() {
-            const tbody = document.getElementById('recent-predictions');
-            tbody.innerHTML = '';
-            
-            const predictions = [
-                { timestamp: '2024-12-03 14:45:22', input_type: 'Text', label: 'Investment Ready', confidence: 0.94, time: 42 },
-                { timestamp: '2024-12-03 14:44:18', input_type: 'Audio', label: 'Mentorship Needed', confidence: 0.87, time: 156 },
-                { timestamp: '2024-12-03 14:43:45', input_type: 'Text', label: 'Needs Refinement', confidence: 0.76, time: 38 },
-                { timestamp: '2024-12-03 14:42:33', input_type: 'Text', label: 'Investment Ready', confidence: 0.92, time: 45 },
-                { timestamp: '2024-12-03 14:41:12', input_type: 'Audio', label: 'Mentorship Needed', confidence: 0.89, time: 178 }
-            ];
-            
-            predictions.forEach(pred => {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${pred.timestamp}</td>
-                    <td>${pred.input_type}</td>
-                    <td>${pred.label}</td>
-                    <td>${(pred.confidence * 100).toFixed(1)}%</td>
-                    <td>${pred.time}ms</td>
-                `;
-                tbody.appendChild(row);
-            });
-        }
-
-        // Chart creation functions
-        function createMetricsChart() {
-            const ctx = document.getElementById('metricsChart');
-            if (!ctx) return;
-            
-            if (metricsChart) {
-                metricsChart.destroy();
-            }
-            
-            metricsChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ['Epoch 1', 'Epoch 2', 'Epoch 3', 'Epoch 4', 'Epoch 5', 'Epoch 6', 'Epoch 7', 'Epoch 8', 'Epoch 9', 'Epoch 10'],
-                    datasets: [{
-                        label: 'Accuracy',
-                        data: [0.65, 0.72, 0.78, 0.83, 0.87, 0.90, 0.92, 0.93, 0.94, 0.942],
-                        borderColor: '#22c55e',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        tension: 0.4
-                    }, {
-                        label: 'Loss',
-                        data: [0.45, 0.38, 0.32, 0.28, 0.24, 0.20, 0.16, 0.12, 0.08, 0.058],
-                        borderColor: '#f59e0b',
-                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#e8f5e8' }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        },
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            ticks: { color: '#a1a1aa' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createLabelChart(distribution = null) {
-            const ctx = document.getElementById('labelChart');
-            if (!ctx) return;
-            
-            if (labelChart) {
-                labelChart.destroy();
-            }
-            
-            const defaultDistribution = distribution || [
-                { predicted_label: 'Investment Ready', count: 8547 },
-                { predicted_label: 'Mentorship Needed', count: 4321 },
-                { predicted_label: 'Needs Refinement', count: 2379 }
-            ];
-            
-            labelChart = new Chart(ctx, {
-                type: 'doughnut',
-                data: {
-                    labels: defaultDistribution.map(d => d.predicted_label),
-                    datasets: [{
-                        data: defaultDistribution.map(d => d.count),
-                        backgroundColor: ['#22c55e', '#06b6d4', '#f59e0b'],
-                        borderColor: '#0d1a0d',
-                        borderWidth: 2
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#e8f5e8' }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createPerformanceChart() {
-            const ctx = document.getElementById('performanceChart');
-            if (!ctx) return;
-            
-            if (performanceChart) {
-                performanceChart.destroy();
-            }
-            
-            const hours = Array.from({length: 24}, (_, i) => `${i}:00`);
-            const responseTimeData = hours.map(() => 35 + Math.random() * 20);
-            const requestData = hours.map(() => 800 + Math.random() * 600);
-            
-            performanceChart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: hours,
-                    datasets: [{
-                        label: 'Response Time (ms)',
-                        data: responseTimeData,
-                        borderColor: '#22c55e',
-                        backgroundColor: 'rgba(34, 197, 94, 0.1)',
-                        tension: 0.4
-                    }, {
-                        label: 'Requests/min',
-                        data: requestData,
-                        borderColor: '#06b6d4',
-                        backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                        tension: 0.4,
-                        yAxisID: 'y1'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#e8f5e8' }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        },
-                        y: {
-                            type: 'linear',
-                            display: true,
-                            position: 'left',
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        },
-                        y1: {
-                            type: 'linear',
-                            display: true,
-                            position: 'right',
-                            ticks: { color: '#a1a1aa' },
-                            grid: { drawOnChartArea: false }
-                        }
-                    }
-                }
-            });
-        }
-
-        function createQueryDistributionChart(distribution) {
-            const ctx = document.getElementById('queryDistributionChart');
-            if (!ctx) return;
-            
-            if (queryDistributionChart) {
-                queryDistributionChart.destroy();
-            }
-            
-            queryDistributionChart = new Chart(ctx, {
-                type: 'bar',
-                data: {
-                    labels: distribution.map(d => d.predicted_label),
-                    datasets: [{
-                        label: 'Query Count',
-                        data: distribution.map(d => d.count),
-                        backgroundColor: ['rgba(34, 197, 94, 0.8)', 'rgba(6, 182, 212, 0.8)', 'rgba(245, 158, 11, 0.8)'],
-                        borderColor: ['#22c55e', '#06b6d4', '#f59e0b'],
-                        borderWidth: 1
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    plugins: {
-                        legend: {
-                            labels: { color: '#e8f5e8' }
-                        }
-                    },
-                    scales: {
-                        x: {
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        },
-                        y: {
-                            ticks: { color: '#a1a1aa' },
-                            grid: { color: '#1a331a' }
-                        }
-                    }
-                }
-            });
-        }
-
-        // Training functionality
-        
-
-        function pollTrainingStatus() {
-            const interval = setInterval(async () => {
-                try {
-                    const response = await fetch(`${API_BASE}/training/status`);
-                    const status = await response.json();
-                    
-                    updateTrainingDisplay(status);
-                    
-                    if (!status.is_training) {
-                        trainingInProgress = false;
-                        clearInterval(interval);
-                    }
-                } catch (error) {
-                    console.error('Error polling training status:', error);
-                    clearInterval(interval);
-                }
-            }, 2000);
-        }
-
-        function updateTrainingDisplay(status) {
-            const progressBar = document.getElementById('training-progress');
-            const progressText = document.getElementById('progress-text');
-            const trainingLog = document.getElementById('training-log');
-            
-            progressBar.style.width = `${status.progress}%`;
-            
-            if (status.is_training) {
-                progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-            } else if (status.progress === 100) {
-                progressText.textContent = 'Training completed successfully!';
-            } else {
-                progressText.textContent = 'Training not in progress';
-            }
-            
-            trainingLog.innerHTML = status.logs.join('<br>');
-            trainingLog.scrollTop = trainingLog.scrollHeight;
-        }
-    </script>
-    <script>
-    // Configuration - Update with your actual API URL
-    const API_BASE = 'http://localhost:8000';
-    
-    // Global variables
-    let trainingInProgress = false;
-    let metricsChart = null;
-    let performanceChart = null;
-    let labelChart = null;
-    let queryDistributionChart = null;
-    let pollingInterval = null;
-
-    // Initialize dashboard
-    window.addEventListener('load', async () => {
-        await loadTabData('overview');
-        startAutoRefresh();
-        updateConnectionStatus();
-        
-        // Add export button
-        const exportButton = document.createElement('button');
-        exportButton.className = 'btn btn-secondary';
-        exportButton.style.cssText = 'margin-left: 16px; font-size: 12px; padding: 6px 12px;';
-        exportButton.textContent = 'Export Data';
-        exportButton.onclick = () => {
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab) exportData(activeTab.id);
-        };
-        document.querySelector('.quick-actions').appendChild(exportButton);
-    });
-
-    // Enhanced API Integration Functions
-    async function fetchWithRetry(url, options = {}, retries = 3) {
-        for (let i = 0; i < retries; i++) {
-            try {
-                const response = await fetch(url, options);
-                if (response.ok) return response;
-                throw new Error(`HTTP ${response.status}`);
-            } catch (error) {
-                if (i === retries - 1) throw error;
-                await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
-            }
-        }
-    }
-
-    // Real-time Data Loading
-    async function loadTabData(tabId) {
-        try {
-            switch(tabId) {
-                case 'overview':
-                    await loadOverviewData();
-                    break;
-                case 'metrics':
-                    await loadMetricsData();
-                    break;
-                case 'performance':
-                    await loadPerformanceData();
-                    break;
-                case 'database':
-                    await loadDatabaseData();
-                    break;
-                case 'users':
-                    await loadUsersData();
-                    break;
-                case 'retrain':
-                    await loadTrainingStatus();
-                    break;
-                case 'logs':
-                    await loadLogsData();
-                    break;
-                case 'query-stats':
-                    await loadQueryStatsData();
-                    break;
-            }
-        } catch (error) {
-            console.error(`Error loading ${tabId} data:`, error);
-            showErrorToast(`Failed to load ${tabId} data`);
-            loadFallbackData(tabId);
-        }
-    }
-
-    // Enhanced Training Functions
-    
-
-    async function pollTrainingStatus() {
-        if (pollingInterval) clearInterval(pollingInterval);
-        
-        pollingInterval = setInterval(async () => {
-            try {
-                const response = await fetch(`${API_BASE}/training/status`);
-                const status = await response.json();
-                updateTrainingDisplay(status);
-                
-                if (!status.is_training) {
-                    trainingInProgress = false;
-                    clearInterval(pollingInterval);
-                    showSuccessToast('Training completed!');
-                    // Refresh metrics after training
-                    if (document.getElementById('metrics').classList.contains('active')) {
-                        await loadMetricsData();
-                    }
-                }
-            } catch (error) {
-                console.error('Error polling training status:', error);
-                clearInterval(pollingInterval);
-            }
-        }, 2000);
-    }
-
-    function updateTrainingDisplay(status) {
-        const progressBar = document.getElementById('training-progress');
-        const progressText = document.getElementById('progress-text');
-        const trainingLog = document.getElementById('training-log');
-        
-        progressBar.style.width = `${status.progress}%`;
-        
-        if (status.is_training) {
-            progressText.textContent = `Training in progress... Epoch ${status.current_epoch} (${Math.round(status.progress)}%)`;
-        } else if (status.progress === 100) {
-            progressText.textContent = 'Training completed successfully!';
-        } else {
-            progressText.textContent = 'Ready to start training';
-        }
-        
-        if (status.logs && status.logs.length > 0) {
-            trainingLog.innerHTML = status.logs.join('<br>');
-            trainingLog.scrollTop = trainingLog.scrollHeight;
-        }
-    }
-
-    // Enhanced Data Loading Functions
-    async function loadMetricsData() {
-        const response = await fetchWithRetry(`${API_BASE}/metrics`);
-        const data = await response.json();
-        
-        // Update metrics display
-        document.getElementById('metrics-accuracy').textContent = `${(data.accuracy * 100).toFixed(1)}%`;
-        document.getElementById('metrics-loss').textContent = data.loss_value.toFixed(3);
-        document.getElementById('metrics-precision').textContent = `${(data.precision_score * 100).toFixed(1)}%`;
-        document.getElementById('metrics-recall').textContent = `${(data.recall_score * 100).toFixed(1)}%`;
-        
-        // Update charts
-        createMetricsChart();
-        createLabelChart(data.label_distribution);
-    }
-
-    async function loadPerformanceData() {
-        const response = await fetchWithRetry(`${API_BASE}/performance`);
-        const data = await response.json();
-        
-        // Update performance display
-        document.getElementById('perf-inference').textContent = `${data.avg_inference_time}ms`;
-        document.getElementById('perf-requests').textContent = data.requests_per_minute.toLocaleString();
-        document.getElementById('perf-uptime').textContent = `${data.uptime}%`;
-        document.getElementById('perf-memory').textContent = data.memory_usage;
-        document.getElementById('cpu-usage').textContent = data.cpu_usage;
-        document.getElementById('gpu-usage').textContent = data.gpu_usage;
-        
-        createPerformanceChart();
-    }
-
-    async function loadUsersData() {
-        const response = await fetchWithRetry(`${API_BASE}/users`);
-        const users = await response.json();
-        
-        const tbody = document.getElementById('users-tbody');
-        tbody.innerHTML = '';
-        
-        users.forEach(user => {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${user.name}</td>
-                <td>${user.email}</td>
-                <td>${user.role}</td>
-                <td>${user.last_access_formatted}</td>
-                <td>${user.api_calls.toLocaleString()}</td>
-            `;
-            tbody.appendChild(row);
-        });
-    }
-
-    // Utility Functions
-    function showSuccessToast(message) {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            background: #22c55e;
-            color: white;
-            border-radius: 8px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    function showErrorToast(message) {
-        const toast = document.createElement('div');
-        toast.style.cssText = `
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 24px;
-            background: #ef4444;
-            color: white;
-            border-radius: 8px;
-            z-index: 1000;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        `;
-        toast.textContent = message;
-        document.body.appendChild(toast);
-        setTimeout(() => toast.remove(), 3000);
-    }
-
-    function startAutoRefresh() {
-        setInterval(() => {
-            const activeTab = document.querySelector('.tab-content.active');
-            if (activeTab && !trainingInProgress) {
-                loadTabData(activeTab.id);
-            }
-        }, 30000);
-    }
-
-    // Update connection status indicator
-    function updateConnectionStatus() {
-        const statusIndicator = document.createElement('div');
-        statusIndicator.id = 'connection-status';
-        statusIndicator.style.cssText = `
-            position: fixed;
-            top: 16px;
-            right: 16px;
-            padding: 8px 16px;
-            border-radius: 6px;
-            font-size: 12px;
-            font-weight: 500;
-            z-index: 1000;
-            transition: all 0.3s ease;
-        `;
-        document.body.appendChild(statusIndicator);
-        
-        async function checkConnection() {
-            try {
-                // Change from HEAD to GET request
-                await fetch(`${API_BASE}/`, { method: 'GET' });
-                statusIndicator.textContent = '● API Connected';
-                statusIndicator.style.background = '#16a34a20';
-                statusIndicator.style.color = '#22c55e';
-                statusIndicator.style.border = '1px solid #22c55e';
-            } catch (error) {
-                statusIndicator.textContent = '● API Disconnected';
-                statusIndicator.style.background = '#dc262620';
-                statusIndicator.style.color = '#ef4444';
-                statusIndicator.style.border = '1px solid #ef4444';
-            }
-        }
-        
-        checkConnection();
-        setInterval(checkConnection, 10000);
-    }
-
-                // Training configuration object
-            let trainingConfig = {
-                batch_size: 32,
-                learning_rate: 0.001,
-                epochs: 10
-            };
-
-            // Initialize training buttons
-            document.addEventListener('DOMContentLoaded', () => {
-                // Start Training button
-                const startTrainingBtn = document.getElementById('startTrainingBtn');
-                if (startTrainingBtn) {
-                    startTrainingBtn.addEventListener('click', startTraining);
-                }
-
-                // Configure Training button
-                const configureTrainingBtn = document.getElementById('configureTrainingBtn');
-                if (configureTrainingBtn) {
-                    configureTrainingBtn.addEventListener('click', showTrainingConfig);
-                }
-
-                // Modal buttons
-                const saveConfigBtn = document.getElementById('saveConfigBtn');
-                const cancelConfigBtn = document.getElementById('cancelConfigBtn');
-                const modal = document.getElementById('trainingConfigModal');
-
-                if (saveConfigBtn && cancelConfigBtn && modal) {
-                    saveConfigBtn.addEventListener('click', saveTrainingConfig);
-                    cancelConfigBtn.addEventListener('click', () => {
-                        modal.style.display = 'none';
-                    });
-                }
-            });
-
-            // Show training configuration modal
-            function showTrainingConfig() {
-                const modal = document.getElementById('trainingConfigModal');
-                if (!modal) return;
-                
-                // Set current values in inputs
-                document.getElementById('batchSize').value = trainingConfig.batch_size;
-                document.getElementById('learningRate').value = trainingConfig.learning_rate;
-                document.getElementById('epochs').value = trainingConfig.epochs;
-                
-                modal.style.display = 'flex';
-            }
-
-            // Save training configuration
-            function saveTrainingConfig() {
-                const modal = document.getElementById('trainingConfigModal');
-                if (!modal) return;
-                
-                // Get values from inputs
-                trainingConfig = {
-                    batch_size: parseInt(document.getElementById('batchSize').value) || 32,
-                    learning_rate: parseFloat(document.getElementById('learningRate').value) || 0.001,
-                    epochs: parseInt(document.getElementById('epochs').value) || 10
-                };
-                
-                modal.style.display = 'none';
-                showSuccessToast('Training configuration saved!');
-            }
-
-            // Updated startTraining function
-            async function startTraining() {
-                if (trainingInProgress) {
-                    showErrorToast('Training already in progress');
-                    return;
-                }
-                
-                try {
-                    const response = await fetch(`${API_BASE}/training/start`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                        },
-                        body: JSON.stringify(trainingConfig) // Use the configured values
-                    });
-                    
-                    if (response.ok) {
-                        trainingInProgress = true;
-                        showSuccessToast('Training started with current configuration');
-                        pollTrainingStatus();
-                    } else {
-                        throw new Error('Failed to start training');
-                    }
-                } catch (error) {
-                    console.error('Error starting training:', error);
-                    showErrorToast('Failed to start training');
-                    // Fallback to simulation if API is not available
-                    simulateTraining();
-                }
-            }
-
-</script>

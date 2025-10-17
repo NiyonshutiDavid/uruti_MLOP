@@ -13,6 +13,18 @@ import 'dart:typed_data';
 
 void main() => runApp(MissionClassifierApp());
 
+// Configuration class for easy backend URL management
+class AppConfig {
+  static const String baseUrl = 'http://127.0.0.1:8000'; // Change this to your backend URL
+  // static const String baseUrl = 'https://your-production-domain.com'; // Production URL
+  
+  static String get predictUrl => '$baseUrl/predict';
+  static String get chatUrl => '$baseUrl/chat';
+  static String get chatHistoryUrl => '$baseUrl/chat/history';
+  static String get userConversationsUrl => '$baseUrl/chat/conversations';
+  static String get trackActivityUrl => '$baseUrl/track-activity';
+}
+
 class MissionClassifierApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
@@ -77,9 +89,40 @@ class AnalysisHistory {
   }
 }
 
+// Chat History Model
+class ChatHistory {
+  final String conversationId;
+  final String userMessage;
+  final String botResponse;
+  final String category;
+  final double confidence;
+  final DateTime timestamp;
+
+  ChatHistory({
+    required this.conversationId,
+    required this.userMessage,
+    required this.botResponse,
+    required this.category,
+    required this.confidence,
+    required this.timestamp,
+  });
+
+  factory ChatHistory.fromJson(Map<String, dynamic> json) {
+    return ChatHistory(
+      conversationId: json['conversation_id'] ?? '',
+      userMessage: json['user_message'] ?? '',
+      botResponse: json['bot_response'] ?? '',
+      category: json['category'] ?? '',
+      confidence: (json['confidence'] ?? 0.0).toDouble(),
+      timestamp: DateTime.parse(json['created_at'] ?? DateTime.now().toIso8601String()),
+    );
+  }
+}
+
 // History Manager
 class HistoryManager {
   static List<AnalysisHistory> _history = [];
+  static Map<String, List<ChatHistory>> _chatHistory = {};
 
   static List<AnalysisHistory> get history => _history;
 
@@ -97,6 +140,35 @@ class HistoryManager {
 
   static void clearHistory() {
     _history.clear();
+  }
+
+  // Chat History Methods
+  static void addChatMessage(String conversationId, ChatHistory chat) {
+    if (!_chatHistory.containsKey(conversationId)) {
+      _chatHistory[conversationId] = [];
+    }
+    _chatHistory[conversationId]!.insert(0, chat);
+    
+    // Keep only last 100 messages per conversation
+    if (_chatHistory[conversationId]!.length > 100) {
+      _chatHistory[conversationId] = _chatHistory[conversationId]!.take(100).toList();
+    }
+  }
+
+  static List<ChatHistory>? getChatHistory(String conversationId) {
+    return _chatHistory[conversationId];
+  }
+
+  static List<String> getConversationIds() {
+    return _chatHistory.keys.toList();
+  }
+
+  static void clearChatHistory(String conversationId) {
+    _chatHistory.remove(conversationId);
+  }
+
+  static void clearAllChatHistory() {
+    _chatHistory.clear();
   }
 }
 
@@ -224,7 +296,6 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
   late Animation<double> _animation;
 
   final TextEditingController _textController = TextEditingController();
-  final String apiUrl = 'http://localhost:8000/predict';
 
   @override
   void initState() {
@@ -239,7 +310,7 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
     );
     _initRecorder();
     _initPlayer();
-    _trackUserActivity('app_launch'); // Add this line
+    _trackUserActivity('app_launch');
   }
 
   Future<void> _initRecorder() async {
@@ -287,35 +358,31 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
   }
 
   Future<void> _pickAudioFile() async {
-    FilePickerResult? result = await FilePicker.platform.pickFiles(
-      type: FileType.audio,
-      allowMultiple: false,
-    );
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.audio,
+        allowMultiple: false,
+      );
 
-    if (result != null) {
-      String filePath = result.files.single.path!;
-      String convertedPath = await _convertToWav(filePath);
-      _sendAudioToAPI(convertedPath, 'upload');
+      if (result != null && result.files.single.path != null) {
+        String filePath = result.files.single.path!;
+        String convertedPath = await _convertToWav(filePath);
+        _sendAudioToAPI(convertedPath, 'upload');
+      } else {
+        _showSnackBar('No file selected or file path is null');
+      }
+    } catch (e) {
+      _showSnackBar('Error picking file: $e');
     }
   }
 
   Future<String> _convertToWav(String inputPath) async {
-    // For simplicity, we'll assume the conversion or just copy if it's already WAV
-    // In a real app, you'd use FFmpeg or similar for actual conversion
     String fileName = path.basenameWithoutExtension(inputPath);
-    String extension = path.extension(inputPath).toLowerCase();
-    
     Directory tempDir = Directory.systemTemp;
     String outputPath = '${tempDir.path}/${fileName}_converted.wav';
     
-    if (extension == '.wav') {
-      // Already WAV, just copy
-      await File(inputPath).copy(outputPath);
-    } else {
-      // For demo purposes, we'll just copy the file with .wav extension
-      // In production, you'd use actual audio conversion
-      await File(inputPath).copy(outputPath);
-    }
+    // For demo purposes, we'll copy the file with .wav extension
+    await File(inputPath).copy(outputPath);
     
     return outputPath;
   }
@@ -340,14 +407,15 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
 
   Future<Map<String, dynamic>> _makeTextRequest(String text) async {
     try {
-      final response = await http.post(
-        Uri.parse('$apiUrl?user_id=anonymous'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'text': text}),
-      );
+      var request = http.MultipartRequest('POST', Uri.parse(AppConfig.predictUrl));
+      request.fields['user_id'] = 'anonymous';
+      request.fields['input_type'] = 'text';
+      request.fields['text'] = text;
+
+      var streamedResponse = await request.send();
+      var response = await http.Response.fromStream(streamedResponse);
 
       if (response.statusCode == 200) {
-        // Log the prediction to history
         final result = json.decode(response.body);
         HistoryManager.addHistory(AnalysisHistory(
           id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -357,7 +425,6 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
           inputType: 'text',
         ));
         
-        // Track activity
         await _trackUserActivity('text_prediction');
         
         return result;
@@ -368,10 +435,11 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
       throw Exception('Error connecting to API: $e');
     }
   }
+
   Future<void> _trackUserActivity(String activity) async {
     try {
       await http.post(
-        Uri.parse('$apiUrl/track-activity'),
+        Uri.parse(AppConfig.trackActivityUrl),
         headers: {'Content-Type': 'application/json'},
         body: json.encode({
           'user_id': 'anonymous',
@@ -389,7 +457,7 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
       context,
       MaterialPageRoute(
         builder: (context) => ResultPage(
-          future: _makeAudioRequest(audioPath),
+          future: _makeAudioRequest(audioPath, inputType),
           inputText: 'Audio input',
           audioPath: audioPath,
           inputType: inputType,
@@ -398,9 +466,11 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
     );
   }
 
-  Future<Map<String, dynamic>> _makeAudioRequest(String audioPath) async {
+  Future<Map<String, dynamic>> _makeAudioRequest(String audioPath, String inputType) async {
     try {
-      var request = http.MultipartRequest('POST', Uri.parse('$apiUrl?user_id=anonymous'));
+      var request = http.MultipartRequest('POST', Uri.parse(AppConfig.predictUrl));
+      request.fields['user_id'] = 'anonymous';
+      request.fields['input_type'] = inputType;
       
       request.files.add(await http.MultipartFile.fromPath(
         'file', 
@@ -438,6 +508,25 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
     );
   }
 
+  void _navigateToChatbot({Map<String, dynamic>? analysisResult, String? inputText}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ChatbotPage(
+          initialAnalysisResult: analysisResult,
+          initialInputText: inputText,
+        ),
+      ),
+    );
+  }
+
+  void _navigateToChatHistory() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => ChatHistoryPage()),
+    );
+  }
+
   @override
   void dispose() {
     _recorder.closeRecorder();
@@ -465,7 +554,12 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
           IconButton(
             icon: Icon(Icons.history),
             onPressed: _navigateToHistory,
-            tooltip: 'View History',
+            tooltip: 'View Analysis History',
+          ),
+          IconButton(
+            icon: Icon(Icons.chat),
+            onPressed: _navigateToChatHistory,
+            tooltip: 'View Chat History',
           ),
         ],
       ),
@@ -772,6 +866,25 @@ class _MissionInputPageState extends State<MissionInputPage> with SingleTickerPr
           ),
         ),
       ),
+      floatingActionButton: Column(
+        mainAxisAlignment: MainAxisAlignment.end,
+        children: [
+          FloatingActionButton(
+            onPressed: _navigateToChatHistory,
+            backgroundColor: Colors.blue.shade700,
+            mini: true,
+            child: Icon(Icons.history, color: Colors.white),
+            tooltip: 'Chat History',
+          ),
+          SizedBox(height: 12),
+          FloatingActionButton(
+            onPressed: () => _navigateToChatbot(),
+            backgroundColor: Colors.purple.shade700,
+            child: Icon(Icons.chat, color: Colors.white),
+            tooltip: 'Chat with AI Assistant',
+          ),
+        ],
+      ),
     );
   }
 }
@@ -975,16 +1088,16 @@ class ResultPage extends StatelessWidget {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => RefineResultPage(
-                                    originalResult: result,
-                                    inputText: inputText,
+                                  builder: (context) => ChatbotPage(
+                                    initialAnalysisResult: result,
+                                    initialInputText: inputText,
                                   ),
                                 ),
                               );
                             },
-                            icon: Icon(Icons.auto_fix_high, color: Colors.white),
+                            icon: Icon(Icons.chat, color: Colors.white),
                             label: Text(
-                              'Refine with AI',
+                              'Chat with AI',
                               style: GoogleFonts.interTight(
                                 fontSize: 14,
                                 fontWeight: FontWeight.w600,
@@ -1032,6 +1145,587 @@ class ResultPage extends StatelessWidget {
     );
   }
 }
+
+class ChatbotPage extends StatefulWidget {
+  final Map<String, dynamic>? initialAnalysisResult;
+  final String? initialInputText;
+  final String? conversationId;
+
+  const ChatbotPage({
+    super.key,
+    this.initialAnalysisResult,
+    this.initialInputText,
+    this.conversationId,
+  });
+
+  @override
+  _ChatbotPageState createState() => _ChatbotPageState();
+}
+
+class _ChatbotPageState extends State<ChatbotPage> {
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessage> _messages = [];
+  final ScrollController _scrollController = ScrollController();
+  bool _isLoading = false;
+  String _conversationId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _conversationId = widget.conversationId ?? DateTime.now().millisecondsSinceEpoch.toString();
+    
+    // Load existing chat history if conversationId is provided
+    if (widget.conversationId != null) {
+      _loadChatHistory();
+    } else {
+      // Add initial message if we have analysis results
+      if (widget.initialAnalysisResult != null && widget.initialInputText != null) {
+        _addInitialContextMessage();
+      } else {
+        _addWelcomeMessage();
+      }
+    }
+  }
+
+  void _loadChatHistory() {
+    final history = HistoryManager.getChatHistory(_conversationId);
+    if (history != null) {
+      setState(() {
+        _messages.addAll(history.map((chat) => ChatMessage(
+          text: chat.userMessage,
+          isUser: true,
+          timestamp: chat.timestamp,
+        )));
+        _messages.addAll(history.map((chat) => ChatMessage(
+          text: chat.botResponse,
+          isUser: false,
+          timestamp: chat.timestamp,
+        )));
+      });
+      _scrollToBottom();
+    }
+  }
+
+  void _addWelcomeMessage() {
+    _messages.add(ChatMessage(
+      text: "Hello! I'm your AI startup advisor. I can help you with business ideas, funding strategies, mentorship guidance, and refining your startup concepts. What would you like to discuss today?",
+      isUser: false,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  void _addInitialContextMessage() {
+    String analysisSummary = _formatAnalysisResults(widget.initialAnalysisResult!);
+    _messages.add(ChatMessage(
+      text: "I've analyzed your input: \"${widget.initialInputText}\"\n\nBased on my analysis: $analysisSummary\n\nHow can I help you further with this? I can provide advice on implementation, potential challenges, funding options, or next steps.",
+      isUser: false,
+      timestamp: DateTime.now(),
+    ));
+  }
+
+  String _formatAnalysisResults(Map<String, dynamic> results) {
+    return results.entries.map((entry) => '${entry.key}: ${entry.value}').join(', ');
+  }
+
+  Future<void> _sendMessage() async {
+    if (_messageController.text.trim().isEmpty) return;
+
+    final String messageText = _messageController.text.trim();
+    _messageController.clear();
+
+    // Add user message
+    setState(() {
+      _messages.add(ChatMessage(
+        text: messageText,
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
+    });
+
+    _scrollToBottom();
+
+    // Show loading
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      final response = await http.post(
+        Uri.parse(AppConfig.chatUrl),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'message': messageText,
+          'user_id': 'anonymous',
+          'conversation_id': _conversationId,
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = json.decode(response.body);
+        final String botResponse = data['bot_response'] ?? 'I apologize, but I encountered an error processing your request.';
+        final String category = data['category'] ?? '';
+        final double confidence = (data['confidence'] ?? 0.0).toDouble();
+
+        // Add bot response
+        setState(() {
+          _messages.add(ChatMessage(
+            text: botResponse,
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+        });
+
+        // Save to local history
+        HistoryManager.addChatMessage(_conversationId, ChatHistory(
+          conversationId: _conversationId,
+          userMessage: messageText,
+          botResponse: botResponse,
+          category: category,
+          confidence: confidence,
+          timestamp: DateTime.now(),
+        ));
+
+      } else {
+        throw Exception('Failed to get response: ${response.statusCode}');
+      }
+    } catch (e) {
+      setState(() {
+        _messages.add(ChatMessage(
+          text: 'Sorry, I encountered an error: $e. Please check your connection and try again.',
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
+      });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+      _scrollToBottom();
+    }
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          'AI Startup Advisor',
+          style: GoogleFonts.interTight(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.8,
+          ),
+        ),
+        backgroundColor: Colors.purple.shade700,
+        elevation: 0,
+        actions: [
+          IconButton(
+            icon: Icon(Icons.history),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => ChatHistoryPage(),
+                ),
+              );
+            },
+            tooltip: 'Chat History',
+          ),
+        ],
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: EdgeInsets.all(16),
+              itemCount: _messages.length + (_isLoading ? 1 : 0),
+              itemBuilder: (context, index) {
+                if (index < _messages.length) {
+                  final message = _messages[index];
+                  return ChatBubble(
+                    message: message.text,
+                    isUser: message.isUser,
+                    timestamp: message.timestamp,
+                  );
+                } else {
+                  return Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Row(
+                      children: [
+                        SpinKitThreeBounce(
+                          color: Colors.purple.shade400,
+                          size: 20,
+                        ),
+                        SizedBox(width: 16),
+                        Text(
+                          'AI is thinking...',
+                          style: GoogleFonts.interTight(
+                            color: Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+              },
+            ),
+          ),
+          Container(
+            padding: EdgeInsets.all(16),
+            color: Colors.grey.shade900,
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _messageController,
+                    style: GoogleFonts.interTight(
+                      color: Colors.white,
+                      letterSpacing: -0.4,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Ask about startups, funding, mentorship...',
+                      hintStyle: TextStyle(color: Colors.grey.shade500),
+                      filled: true,
+                      fillColor: Colors.grey.shade800,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(25),
+                        borderSide: BorderSide.none,
+                      ),
+                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    ),
+                    onSubmitted: (_) => _sendMessage(),
+                  ),
+                ),
+                SizedBox(width: 12),
+                CircleAvatar(
+                  backgroundColor: _isLoading ? Colors.grey : Colors.purple.shade700,
+                  child: IconButton(
+                    icon: Icon(Icons.send, color: Colors.white),
+                    onPressed: _isLoading ? null : _sendMessage,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+}
+
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final DateTime timestamp;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.timestamp,
+  });
+}
+
+class ChatBubble extends StatelessWidget {
+  final String message;
+  final bool isUser;
+  final DateTime timestamp;
+
+  const ChatBubble({
+    super.key,
+    required this.message,
+    required this.isUser,
+    required this.timestamp,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: isUser ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          if (!isUser)
+            CircleAvatar(
+              backgroundColor: Colors.purple.shade700,
+              child: Icon(Icons.psychology, color: Colors.white, size: 16),
+              radius: 16,
+            ),
+          SizedBox(width: 8),
+          Flexible(
+            child: Container(
+              padding: EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: isUser ? Colors.purple.shade700 : Colors.grey.shade800,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: GoogleFonts.interTight(
+                      color: Colors.white,
+                      letterSpacing: -0.4,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    '${timestamp.hour}:${timestamp.minute.toString().padLeft(2, '0')}',
+                    style: GoogleFonts.interTight(
+                      fontSize: 10,
+                      color: Colors.grey.shade400,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          if (isUser)
+            SizedBox(width: 8),
+          if (isUser)
+            CircleAvatar(
+              backgroundColor: Colors.green.shade700,
+              child: Icon(Icons.person, color: Colors.white, size: 16),
+              radius: 16,
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class ChatHistoryPage extends StatefulWidget {
+  @override
+  _ChatHistoryPageState createState() => _ChatHistoryPageState();
+}
+
+class _ChatHistoryPageState extends State<ChatHistoryPage> {
+  List<String> _conversationIds = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+  }
+
+  void _loadConversations() {
+    setState(() {
+      _conversationIds = HistoryManager.getConversationIds();
+    });
+  }
+
+  void _clearAllChatHistory() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: Colors.grey.shade900,
+          title: Text(
+            'Clear All Chat History',
+            style: GoogleFonts.interTight(color: Colors.white),
+          ),
+          content: Text(
+            'Are you sure you want to clear all chat history? This action cannot be undone.',
+            style: GoogleFonts.interTight(color: Colors.white70),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.interTight(color: Colors.green.shade300),
+              ),
+            ),
+            TextButton(
+              onPressed: () {
+                HistoryManager.clearAllChatHistory();
+                setState(() {
+                  _conversationIds.clear();
+                });
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('All chat history cleared'),
+                    backgroundColor: Colors.green.shade700,
+                  ),
+                );
+              },
+              child: Text(
+                'Clear All',
+                style: GoogleFonts.interTight(color: Colors.red.shade400),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        title: Text(
+          'Chat History',
+          style: GoogleFonts.interTight(
+            fontWeight: FontWeight.w600,
+            letterSpacing: -0.8,
+          ),
+        ),
+        backgroundColor: Colors.purple.shade700,
+        elevation: 0,
+        actions: [
+          if (_conversationIds.isNotEmpty)
+            IconButton(
+              icon: Icon(Icons.clear_all),
+              onPressed: _clearAllChatHistory,
+              tooltip: 'Clear All History',
+            ),
+        ],
+      ),
+      body: SafeArea(
+        child: _conversationIds.isEmpty
+            ? Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.chat_bubble_outline,
+                      size: 64,
+                      color: Colors.grey.shade600,
+                    ),
+                    SizedBox(height: 16),
+                    Text(
+                      'No Chat History',
+                      style: GoogleFonts.interTight(
+                        fontSize: 20,
+                        color: Colors.grey.shade400,
+                        letterSpacing: -0.6,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Your conversations with the AI advisor will appear here',
+                      style: GoogleFonts.interTight(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                        letterSpacing: -0.4,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
+              )
+            : ListView.builder(
+                padding: EdgeInsets.all(16),
+                itemCount: _conversationIds.length,
+                itemBuilder: (context, index) {
+                  final conversationId = _conversationIds[index];
+                  final history = HistoryManager.getChatHistory(conversationId);
+                  final lastMessage = history?.isNotEmpty == true ? history!.first : null;
+                  
+                  return Card(
+                    color: Colors.grey.shade900,
+                    margin: EdgeInsets.only(bottom: 12),
+                    child: ListTile(
+                      leading: CircleAvatar(
+                        backgroundColor: Colors.purple.shade700,
+                        child: Icon(Icons.chat, color: Colors.white, size: 20),
+                      ),
+                      title: Text(
+                        'Conversation ${index + 1}',
+                        style: GoogleFonts.interTight(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      subtitle: lastMessage != null
+                          ? Text(
+                              '${lastMessage.userMessage}',
+                              style: GoogleFonts.interTight(
+                                color: Colors.grey.shade400,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            )
+                          : Text(
+                              'No messages',
+                              style: GoogleFonts.interTight(
+                                color: Colors.grey.shade500,
+                              ),
+                            ),
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(
+                            lastMessage != null
+                                ? '${lastMessage.timestamp.hour}:${lastMessage.timestamp.minute.toString().padLeft(2, '0')}'
+                                : '',
+                            style: GoogleFonts.interTight(
+                              color: Colors.grey.shade500,
+                              fontSize: 12,
+                            ),
+                          ),
+                          IconButton(
+                            icon: Icon(Icons.delete, color: Colors.red.shade400, size: 18),
+                            onPressed: () {
+                              HistoryManager.clearChatHistory(conversationId);
+                              setState(() {
+                                _conversationIds.remove(conversationId);
+                              });
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Conversation deleted'),
+                                  backgroundColor: Colors.green.shade700,
+                                ),
+                              );
+                            },
+                          ),
+                        ],
+                      ),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatbotPage(
+                              conversationId: conversationId,
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+}
+
+// HistoryPage and other existing classes remain the same as in the previous version
+// (HistoryPage, HistoryDetailPage, RefineResultPage, etc.)
 
 class HistoryPage extends StatefulWidget {
   @override
@@ -1435,16 +2129,16 @@ class _HistoryPageState extends State<HistoryPage> {
                                     Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                        builder: (context) => RefineResultPage(
-                                          originalResult: item.result,
-                                          inputText: item.inputText,
+                                        builder: (context) => ChatbotPage(
+                                          initialAnalysisResult: item.result,
+                                          initialInputText: item.inputText,
                                         ),
                                       ),
                                     );
                                   },
-                                  icon: Icon(Icons.auto_fix_high, color: Colors.white, size: 16),
+                                  icon: Icon(Icons.chat, color: Colors.white, size: 16),
                                   label: Text(
-                                    'Refine',
+                                    'Chat with AI',
                                     style: GoogleFonts.interTight(
                                       fontSize: 12,
                                       fontWeight: FontWeight.w600,
@@ -1632,16 +2326,16 @@ class HistoryDetailPage extends StatelessWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => RefineResultPage(
-                          originalResult: historyItem.result,
-                          inputText: historyItem.inputText,
+                        builder: (context) => ChatbotPage(
+                          initialAnalysisResult: historyItem.result,
+                          initialInputText: historyItem.inputText,
                         ),
                       ),
                     );
                   },
-                  icon: Icon(Icons.auto_fix_high, color: Colors.white),
+                  icon: Icon(Icons.chat, color: Colors.white),
                   label: Text(
-                    'Refine with AI',
+                    'Chat with AI',
                     style: GoogleFonts.interTight(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
@@ -1663,282 +2357,3 @@ class HistoryDetailPage extends StatelessWidget {
     );
   }
 }
-
-class RefineResultPage extends StatefulWidget {
-  final Map<String, dynamic> originalResult;
-  final String inputText;
-
-  const RefineResultPage({
-    super.key,
-    required this.originalResult,
-    required this.inputText,
-  });
-
-  @override
-  _RefineResultPageState createState() => _RefineResultPageState();
-}
-
-class _RefineResultPageState extends State<RefineResultPage> {
-  final TextEditingController _refineController = TextEditingController();
-  final String apiUrl = 'http://localhost:8000/predict'; // Assuming same endpoint
-
-  Future<Map<String, dynamic>> _refineWithAI(String refinementQuery) async {
-    try {
-      // Combine original input with refinement query
-      String combinedInput = '''
-Original analysis: ${widget.inputText}
-
-Previous results: ${widget.originalResult.toString()}
-
-Refinement request: $refinementQuery
-
-Please provide a refined analysis based on this additional context.
-''';
-
-      final response = await http.post(
-        Uri.parse('$apiUrl?user_id=anonymous'),
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({'text': combinedInput}),
-      );
-
-      if (response.statusCode == 200) {
-        return json.decode(response.body);
-      } else {
-        throw Exception('Failed to refine analysis: ${response.statusCode}');
-      }
-    } catch (e) {
-      throw Exception('Error connecting to API: $e');
-    }
-  }
-
-  void _submitRefinement() {
-    if (_refineController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Please enter your refinement request'),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ResultPage(
-          future: _refineWithAI(_refineController.text.trim()),
-          inputText: 'Refined: ${_refineController.text.trim()}',
-          inputType: 'refined',
-        ),
-      ),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(
-        title: Text(
-          'Refine with AI',
-          style: GoogleFonts.interTight(
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.8,
-          ),
-        ),
-        backgroundColor: Colors.purple.shade700,
-        elevation: 0,
-      ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(20),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.purple.shade800, Colors.purple.shade600],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Column(
-                  children: [
-                    Icon(Icons.auto_fix_high, color: Colors.white, size: 48),
-                    SizedBox(height: 12),
-                    Text(
-                      'AI-Powered Refinement',
-                      style: GoogleFonts.interTight(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                        letterSpacing: -0.8,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Ask specific questions about your analysis or request improvements to get more detailed insights.',
-                      style: GoogleFonts.interTight(
-                        fontSize: 14,
-                        color: Colors.purple.shade100,
-                        letterSpacing: -0.4,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Original Results Summary
-              Text(
-                'ORIGINAL ANALYSIS',
-                style: GoogleFonts.interTight(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.green.shade300,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              SizedBox(height: 12),
-              Container(
-                width: double.infinity,
-                padding: EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade900,
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: Colors.green.shade700, width: 1),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      'Input: ${widget.inputText}',
-                      style: GoogleFonts.interTight(
-                        fontSize: 14,
-                        color: Colors.white70,
-                        letterSpacing: -0.4,
-                      ),
-                    ),
-                    SizedBox(height: 12),
-                    ...widget.originalResult.entries.take(3).map((entry) {
-                      return Padding(
-                        padding: EdgeInsets.only(bottom: 8),
-                        child: RichText(
-                          text: TextSpan(
-                            children: [
-                              TextSpan(
-                                text: '${entry.key}: ',
-                                style: GoogleFonts.interTight(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.green.shade400,
-                                  letterSpacing: -0.4,
-                                ),
-                              ),
-                              TextSpan(
-                                text: entry.value.toString().length > 80
-                                    ? '${entry.value.toString().substring(0, 80)}...'
-                                    : entry.value.toString(),
-                                style: GoogleFonts.interTight(
-                                  fontSize: 14,
-                                  color: Colors.white,
-                                  letterSpacing: -0.4,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    }).toList(),
-                    if (widget.originalResult.length > 3)
-                      Text(
-                        '... and ${widget.originalResult.length - 3} more fields',
-                        style: GoogleFonts.interTight(
-                          fontSize: 12,
-                          color: Colors.grey.shade500,
-                          fontStyle: FontStyle.italic,
-                          letterSpacing: -0.4,
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Refinement Input
-              Text(
-                'REFINEMENT REQUEST',
-                style: GoogleFonts.interTight(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.purple.shade300,
-                  letterSpacing: -0.6,
-                ),
-              ),
-              SizedBox(height: 12),
-              TextField(
-                controller: _refineController,
-                style: GoogleFonts.interTight(
-                  letterSpacing: -0.6,
-                  color: Colors.white,
-                ),
-                decoration: InputDecoration(
-                  hintText: 'Ask for more details, clarification, or specific aspects you want to explore...\n\nExamples:\n• Can you provide more specific recommendations?\n• What are the potential risks involved?\n• How can this be implemented practically?',
-                  hintStyle: TextStyle(color: Colors.grey.shade500),
-                  filled: true,
-                  fillColor: Colors.grey.shade900,
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide.none,
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
-                    borderSide: BorderSide(color: Colors.purple.shade400, width: 2),
-                  ),
-                ),
-                maxLines: 6,
-                minLines: 4,
-              ),
-              
-              SizedBox(height: 24),
-              
-              // Submit Button
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: _submitRefinement,
-                  icon: Icon(Icons.psychology, color: Colors.white),
-                  label: Text(
-                    'Refine Analysis',
-                    style: GoogleFonts.interTight(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: -0.6,
-                      color: Colors.white,
-                    ),
-                  ),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.purple.shade400,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );  }
-}
-

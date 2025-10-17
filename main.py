@@ -1,5 +1,9 @@
-# 1. First imports
 import os
+# Suppress TensorFlow and other low-level warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+import warnings
+warnings.filterwarnings('ignore')
+# 1. First imports
 import tempfile
 import time
 import uuid
@@ -17,7 +21,7 @@ from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import torch
 import whisper
-from transformers import AutoTokenizer, AutoModelForSequenceClassification
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, pipeline
 import psycopg2
 from psycopg2.extras import RealDictCursor
 import psycopg2.pool
@@ -35,6 +39,11 @@ class TrainingConfig(BaseModel):
     batch_size: int = 32
     learning_rate: float = 0.001
     epochs: int = 100
+
+class ChatMessage(BaseModel):
+    message: str
+    user_id: str = "anonymous"
+    conversation_id: Optional[str] = None
 
 # 4. Database connection setup
 connection_pool = None
@@ -67,14 +76,91 @@ templates = Jinja2Templates(directory="templates")
 if os.path.exists("static"):
     app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Load models
+# Initialize chatbot variables before loading
+chatbot_available = False
+chatbot_tokenizer = None
+chatbot_model = None
+
+# Load models from local directories
+print("Loading models from local directories...")
+
+# Load Whisper model for audio transcription
 whisper_model = whisper.load_model("base")
-model_path = './models/distilbert-base-uncased'
-tokenizer = AutoTokenizer.from_pretrained(model_path)
-model = AutoModelForSequenceClassification.from_pretrained(model_path)
 
 # Define labels
 labels = ['Mentorship Needed', 'Investment Ready', 'Needs Refinement']
+
+# Try to load models from different local directories
+model_loaded = False
+
+# Try to load classification model from local directories
+model_paths = [
+    './models/distilbert-base-uncased',  # Your existing model directory
+    './Domain-specific/startup-classifier-model',  # Domain-specific models
+    './results_distilbert-base-uncased',  # Your training results
+]
+
+for model_path in model_paths:
+    if os.path.exists(model_path):
+        try:
+            print(f"Loading classification model from: {model_path}")
+            tokenizer = AutoTokenizer.from_pretrained(model_path)
+            model = AutoModelForSequenceClassification.from_pretrained(model_path)
+            model_loaded = True
+            print(f"Successfully loaded classification model from {model_path}")
+            break
+        except Exception as e:
+            print(f"Failed to load model from {model_path}: {e}")
+
+# If no local model found, use a fallback
+if not model_loaded:
+    print("No local classification model found. Using fallback model...")
+    try:
+        tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
+        model = AutoModelForSequenceClassification.from_pretrained(
+            "distilbert-base-uncased", 
+            num_labels=len(labels)
+        )
+        print("Using fallback distilbert-base-uncased model")
+    except Exception as e:
+        print(f"Failed to load fallback model: {e}")
+        raise
+
+# Try to load chatbot model from local directories
+chatbot_paths = [
+    './Domain-specific/startup-chatbot-model-tf-best',
+    './Domain-specific/startup-chatbot-model-tf',
+]
+
+for chatbot_path in chatbot_paths:
+    if os.path.exists(chatbot_path):
+        try:
+            print(f"Loading chatbot model from: {chatbot_path}")
+            chatbot_tokenizer = AutoTokenizer.from_pretrained(chatbot_path)
+            
+            # Load TensorFlow model with from_tf=True
+            try:
+                from transformers import TFAutoModelForCausalLM, TFAutoModelForSequenceClassification
+                # Try to load as a text generation model first
+                try:
+                    chatbot_model = TFAutoModelForCausalLM.from_pretrained(chatbot_path, from_tf=True)
+                    chatbot_available = True
+                    print(f"Successfully loaded chatbot model as CausalLM from {chatbot_path}")
+                except:
+                    # Fall back to sequence classification
+                    chatbot_model = TFAutoModelForSequenceClassification.from_pretrained(chatbot_path, from_tf=True)
+                    chatbot_available = True
+                    print(f"Successfully loaded chatbot model as SequenceClassification from {chatbot_path}")
+                break
+            except Exception as e:
+                print(f"Failed to load TensorFlow model from {chatbot_path}: {e}")
+                
+        except Exception as e:
+            print(f"Failed to load chatbot model from {chatbot_path}: {e}")
+
+# If no local chatbot model found, use rule-based fallback
+if not chatbot_available:
+    print("No local chatbot model found. Using rule-based chatbot fallback...")
 
 # Training state
 training_state = {
@@ -186,6 +272,20 @@ async def init_database():
                 )
             """)
             
+            # Create chatbot_conversations table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS chatbot_conversations (
+                    id SERIAL PRIMARY KEY,
+                    conversation_id VARCHAR(100),
+                    user_id VARCHAR(100),
+                    user_message TEXT,
+                    bot_response TEXT,
+                    category VARCHAR(50),
+                    confidence FLOAT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
             conn.commit()
     except Exception as e:
         print(f"Database initialization error: {e}")
@@ -219,7 +319,182 @@ async def startup_event():
     except Exception as e:
         print(f"Startup data initialization error: {e}")
 
-# ============= WEB APP ROUTES (from Flask app.py) =============
+# ============= CHATBOT FUNCTIONALITY =============
+
+def is_startup_related(text: str) -> bool:
+    """Check if the text is related to startups, business, or entrepreneurship"""
+    startup_keywords = [
+        'startup', 'business', 'entrepreneur', 'funding', 'investment', 'investor',
+        'pitch', 'venture', 'capital', 'fund', 'money', 'finance', 'financial',
+        'product', 'market', 'customer', 'revenue', 'profit', 'loss', 'growth',
+        'scale', 'team', 'cofounder', 'idea', 'validation', 'MVP', 'prototype',
+        'incubator', 'accelerator', 'mentor', 'advisor', 'strategy', 'plan',
+        'business model', 'competition', 'competitive', 'industry', 'sector',
+        'technology', 'tech', 'innovation', 'innovative', 'disrupt', 'disruption',
+        'company', 'corporation', 'enterprise', 'small business', 'venture capital',
+        'angel investor', 'seed funding', 'series A', 'series B', 'series C',
+        'valuation', 'equity', 'shares', 'stock', 'IPO', 'exit', 'acquisition',
+        'merger', 'partnership', 'collaboration', 'B2B', 'B2C', 'B2B2C',
+        'revenue model', 'pricing', 'cost', 'expense', 'budget', 'forecast',
+        'metric', 'KPI', 'ROI', 'conversion', 'retention', 'churn', 'acquisition',
+        'marketing', 'sales', 'brand', 'branding', 'positioning', 'differentiation',
+        'unique value proposition', 'UVP', 'value proposition', 'customer segment',
+        'target market', 'market size', 'TAM', 'SAM', 'SOM', 'market share',
+        'go to market', 'GTM', 'launch', 'release', 'beta', 'alpha', 'pilot',
+        'trial', 'test', 'experiment', 'hypothesis', 'assumption', 'validation',
+        'problem', 'solution', 'pain point', 'need', 'demand', 'supply',
+        'competitive advantage', 'barrier', 'moat', 'intellectual property', 'IP',
+        'patent', 'trademark', 'copyright', 'license', 'regulation', 'compliance',
+        'legal', 'contract', 'agreement', 'term sheet', 'deal', 'negotiation',
+        'due diligence', 'pitch deck', 'executive summary', 'business plan',
+        'financial projection', 'cash flow', 'balance sheet', 'income statement',
+        'break even', 'profitability', 'sustainable', 'sustainability',
+        'social impact', 'ESG', 'environmental', 'social', 'governance',
+        'startup ecosystem', 'entrepreneurship', 'founder', 'co-founder',
+        'CEO', 'CTO', 'COO', 'CFO', 'CMO', 'management', 'leadership',
+        'team building', 'hiring', 'recruitment', 'talent', 'skill', 'expertise',
+        'advisor', 'board', 'director', 'shareholder', 'stakeholder', 'investor relations'
+    ]
+    
+    text_lower = text.lower()
+    return any(keyword in text_lower for keyword in startup_keywords)
+
+def generate_chatbot_response(user_message: str, category: str, confidence: float) -> str:
+    """Generate a response based on the classified category and user message"""
+    
+    # If the message is not startup-related, provide a polite response
+    if not is_startup_related(user_message):
+        return "I specialize in startup and business advisory. I can help you with business ideas, funding, mentorship, and refinement strategies. Please ask me about entrepreneurship, business development, or startup challenges."
+    
+    # Category-specific responses
+    if category == "Mentorship Needed":
+        responses = [
+            f"Based on your query about '{user_message}', this sounds like an early-stage startup that could benefit from mentorship. I recommend connecting with experienced entrepreneurs who can guide you through the initial phases.",
+            f"For early-stage challenges like '{user_message}', mentorship is key. Consider joining startup incubators or finding advisors who have experience in your industry.",
+            f"Your question about '{user_message}' suggests you're in the early stages. Mentorship can help you avoid common pitfalls and accelerate your learning curve."
+        ]
+    elif category == "Investment Ready":
+        responses = [
+            f"Your query '{user_message}' indicates you might be ready for investment. Focus on preparing a solid pitch deck and demonstrating traction to attract investors.",
+            f"Based on '{user_message}', it seems you're considering funding options. Make sure you have clear financial projections and a compelling growth story for potential investors.",
+            f"For investment readiness as suggested by '{user_message}', work on validating your business model and gathering evidence of market demand to strengthen your position with investors."
+        ]
+    elif category == "Needs Refinement":
+        responses = [
+            f"Your question about '{user_message}' suggests some aspects need refinement. Consider conducting more customer research and iterating on your value proposition.",
+            f"Based on '{user_message}', it appears your business idea could benefit from further refinement. Focus on understanding your target market better and refining your solution.",
+            f"For challenges like '{user_message}', refinement is crucial. Analyze feedback systematically and consider pivoting or adjusting your approach based on market response."
+        ]
+    else:
+        responses = [
+            f"I understand you're asking about '{user_message}'. As a startup advisor, I can help you with business validation, funding strategies, or refining your approach. What specific aspect would you like to explore?",
+            f"Regarding '{user_message}', I can provide guidance on startup development. Would you like advice on business planning, funding, or operational refinement?",
+            f"Your question about '{user_message}' touches on important startup considerations. I'd be happy to help you think through business strategy, market positioning, or growth planning."
+        ]
+    
+    # Select response based on confidence level
+    if confidence > 0.7:
+        response = responses[0]
+    elif confidence > 0.5:
+        response = responses[1]
+    else:
+        response = responses[2]
+    
+    # Add confidence note if low confidence
+    if confidence < 0.6:
+        response += f"\n\nNote: My confidence in categorizing your query was moderate. Please provide more details for more specific advice."
+    
+    return response
+
+# ============= CHATBOT ENDPOINTS =============
+
+@app.post("/chat")
+async def chat_with_bot(chat_message: ChatMessage):
+    """
+    Chat endpoint for conversational startup advice
+    """
+    start_time = time.time()
+    
+    # Generate conversation ID if not provided
+    if not chat_message.conversation_id:
+        chat_message.conversation_id = str(uuid.uuid4())
+    
+    # First, classify the user's message using the existing model
+    inputs = tokenizer(chat_message.message, return_tensors="pt", padding=True, truncation=True, max_length=512)
+    
+    with torch.no_grad():
+        outputs = model(**inputs)
+        logits = outputs.logits
+        probabilities = torch.softmax(logits, dim=1)
+        predicted_class_id = torch.argmax(logits, dim=1).item()
+        confidence = probabilities[0][predicted_class_id].item()
+    
+    predicted_label = labels[predicted_class_id]
+    
+    # Generate chatbot response based on classification
+    bot_response = generate_chatbot_response(chat_message.message, predicted_label, confidence)
+    
+    processing_time = time.time() - start_time
+    
+    # Store conversation in database
+    with get_db_connection() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            INSERT INTO chatbot_conversations 
+            (conversation_id, user_id, user_message, bot_response, category, confidence)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (chat_message.conversation_id, chat_message.user_id, chat_message.message, 
+              bot_response, predicted_label, confidence))
+        conn.commit()
+    
+    return {
+        "conversation_id": chat_message.conversation_id,
+        "user_message": chat_message.message,
+        "bot_response": bot_response,
+        "category": predicted_label,
+        "confidence": round(confidence, 4),
+        "processing_time": round(processing_time, 3),
+        "is_startup_related": is_startup_related(chat_message.message)
+    }
+
+@app.get("/chat/history/{conversation_id}")
+async def get_chat_history(conversation_id: str):
+    """Get chat history for a specific conversation"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT user_message, bot_response, category, confidence, created_at
+            FROM chatbot_conversations 
+            WHERE conversation_id = %s
+            ORDER BY created_at ASC
+        """, (conversation_id,))
+        messages = cursor.fetchall()
+    
+    return {
+        "conversation_id": conversation_id,
+        "messages": [dict(msg) for msg in messages]
+    }
+
+@app.get("/chat/conversations/{user_id}")
+async def get_user_conversations(user_id: str):
+    """Get all conversations for a user"""
+    with get_db_connection() as conn:
+        cursor = conn.cursor(cursor_factory=RealDictCursor)
+        cursor.execute("""
+            SELECT DISTINCT conversation_id, MAX(created_at) as last_activity
+            FROM chatbot_conversations 
+            WHERE user_id = %s
+            GROUP BY conversation_id
+            ORDER BY last_activity DESC
+        """, (user_id,))
+        conversations = cursor.fetchall()
+    
+    return {
+        "user_id": user_id,
+        "conversations": [dict(conv) for conv in conversations]
+    }
+
+# ============= EXISTING WEB APP ROUTES (from Flask app.py) =============
 
 @app.get("/", response_class=HTMLResponse)
 @app.head("/")
@@ -414,6 +689,8 @@ async def predict(
         response["input_text"] = input_text
     
     return response
+
+# ============= ALL OTHER EXISTING ROUTES REMAIN UNCHANGED =============
 
 @app.get("/metrics")
 def get_metrics():
