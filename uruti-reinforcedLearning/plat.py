@@ -7,6 +7,7 @@ import os
 import cv2
 import wave
 import pyaudio
+import pygame  # Add missing import
 from datetime import datetime
 from stable_baselines3 import DQN, PPO, A2C
 from environment.pitch_env import PitchCoachEnv
@@ -32,7 +33,7 @@ class PitchCoachPlayer:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
     
     def play_episode(self, record_audio=True, save_video=False):
-        #"""Play one episode with the trained model"""
+        """Play one episode with the trained model"""  # Fixed docstring
         if record_audio and self.audio_recorder.is_available():
             print("Starting audio recording...")
             self.audio_recorder.start_recording()
@@ -110,3 +111,40 @@ class PitchCoachPlayer:
         cv2.destroyAllWindows()
         
         return total_reward, step_count, info
+
+    def generate_report(self, total_reward, step_count, info):
+        """Generate a performance report after the session"""
+        print("\n" + "="*50)
+        print("PITCH SESSION REPORT")
+        print("="*50)
+        print(f"Total Reward: {total_reward:.2f}")
+        print(f"Session Duration: {step_count} steps")
+        
+        if 'final_metrics' in info:
+            metrics = info['final_metrics']
+            print(f"Final Confidence: {metrics.get('confidence', 0):.2f}")
+            print(f"Final Engagement: {metrics.get('engagement', 0):.2f}")
+            print(f"Final Clarity: {metrics.get('clarity', 0):.2f}")
+        
+        print("="*50)
+
+# Add main function to make the script runnable
+def main():
+    parser = argparse.ArgumentParser(description='Play trained RL model for Pitch Coach')
+    parser.add_argument('--model_path', type=str, required=True,
+                       help='Path to the trained model')
+    parser.add_argument('--algorithm', type=str, required=True,
+                       choices=['dqn', 'reinforce', 'a2c'],
+                       help='RL algorithm used for training')
+    parser.add_argument('--record_audio', action='store_true',
+                       help='Record audio during the session')
+    parser.add_argument('--save_video', action='store_true',
+                       help='Save video of the session')
+    
+    args = parser.parse_args()
+    
+    player = PitchCoachPlayer(args.model_path, args.algorithm)
+    player.play_episode(record_audio=args.record_audio, save_video=args.save_video)
+
+if __name__ == "__main__":
+    main()
