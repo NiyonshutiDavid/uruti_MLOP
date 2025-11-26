@@ -66,6 +66,9 @@ The environment features a beautiful PyGame UI showing:
 - Progress bars for slide completion and time remaining
 - Action feedback and performance tips
 - Audience reactions based on engagement levels
+<img width="966" height="684" alt="Screenshot 2025-11-26 at 18 41 48" src="https://github.com/user-attachments/assets/32dfc5b1-5662-4e7c-aa7e-da697dae7e43" />
+
+
 
 ## System Analysis And Design
 ### Deep Q-Network (DQN)
