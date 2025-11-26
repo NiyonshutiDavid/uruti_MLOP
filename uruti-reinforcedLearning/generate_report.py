@@ -8,7 +8,7 @@ from datetime import datetime
 from plotting import RLResultsAnalyzer
 
 class ReportGenerator:
-    def __init__(self, configs_dir="configs", runs_dir="runs", plots_dir="reports/plots", output_file="reports/final_report.md"):
+    def __init__(self, configs_dir="configs", runs_dir="runs", plots_dir="reports/plots", output_file="reports/final_report.pdf"):
         self.configs_dir = configs_dir
         self.runs_dir = runs_dir
         self.plots_dir = plots_dir
