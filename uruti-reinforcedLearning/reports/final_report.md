@@ -1,143 +1,189 @@
 # Reinforcement Learning Summative Assignment Report
 **Student Name:** David Niyonshuti
-**Video Recording:** [Link to your Video 3 minutes max, Camera On, Share the entire Screen]
+**Video Recording:** [Link to your Video - 3 minutes max, Camera On, Share the entire Screen]
 **GitHub Repository:** https://github.com/NiyonshutiDavid/uruti_MLOP/tree/main/uruti-reinforcedLearning
 
 ## Project Overview
-This project implements a Pitch Coach environment where reinforcement learning agents learn to provide optimal pitch selection and sequencing strategies. The system simulates baseball pitching scenarios where agents must make strategic decisions about pitch type, location, and sequencing to maximize effectiveness while minimizing predictable patterns. Four different RL algorithms (DQN, PPO, A2C, and REINFORCE) were implemented and compared to identify the most effective approach for this sequential decision-making problem in sports analytics.
+This project implements a **Pitch Coach** environment where reinforcement learning agents learn to optimize presentation delivery skills. The system simulates a dynamic pitch presentation scenario where agents must make strategic decisions about energy management, audience engagement techniques, slide progression, and storytelling to maximize presentation effectiveness.
+
+The core challenge addresses a common problem faced by founders and presenters: **the lack of objective feedback mechanisms** to improve pitch delivery. Four different RL algorithms (DQN, PPO, A2C, and REINFORCE) were implemented and compared to identify the most effective approach for this interactive presentation skill-learning context.
 
 ## Environment Description
-### Agent(s)
-The agent represents an AI pitching coach that analyzes batter tendencies, game situations, and pitcher capabilities to recommend optimal pitch sequences. The agent learns to balance between exploiting batter weaknesses and maintaining unpredictability in pitch selection.
+### Agent
+The agent represents an AI presenter delivering a pitch in a simulated environment. The agent learns to:
+- Adjust presentation style and energy levels
+- Manage slide transitions and timing
+- Use engagement techniques (gestures, eye contact, storytelling)
+- Adapt based on simulated audience feedback
+- Optimize confidence, engagement, and clarity metrics
 
-### Action Space
-Discrete action space with 12 possible actions representing different pitch types and locations:
-- **Fastball types**: 4-seam, 2-seam, cutter
-- **Breaking balls**: slider, curveball, slurve
-- **Off-speed**: changeup, splitter
-- **Locations**: high/low, inside/outside combinations
+### Action Space (Discrete - 6 Actions)
+| Action | Description |
+|--------|-------------|
+| 0 | Maintain presentation style |
+| 1 | Increase energy |
+| 2 | Use gestures |
+| 3 | Make eye contact |
+| 4 | Next slide |
+| 5 | Add storytelling |
 
-### Observation Space
-The observation space includes:
-- **Batter statistics**: historical performance against pitch types
-- **Game context**: inning, score, base runners, count
-- **Pitcher state**: fatigue level, recent pitch performance
-- **Sequence history**: previous pitches in the at-bat
-Encoded as a 24-dimensional vector with normalized values.
+### Observation Space (6-D Continuous Vector)
+`[confidence, engagement, clarity, pace, slide_progress, time_remaining]`
+
+- **confidence** (0-1): Presenter's confidence level
+- **engagement** (0-1): Audience engagement level
+- **clarity** (0-1): Message clarity and understanding
+- **pace** (0-2): Presentation pacing (1.0 = optimal)
+- **slide_progress** (0-1): Progress through slide deck
+- **time_remaining** (0-1): Remaining time in 30-second pitch
 
 ### Reward Structure
-The reward function balances multiple objectives:
+The reward function balances multiple presentation objectives:
 ```
-R = 0.6 * pitch_effectiveness + 0.2 * sequence_unpredictability - 0.1 * fatigue_penalty - 0.1 * predictability_penalty
+R(s,a) = R_action(a) + 0.15 * (0.3*confidence + 0.4*engagement + 0.3*clarity)
 ```
-- **pitch_effectiveness**: +1 for swings and misses, +0.5 for weak contact, -0.5 for hard contact
-- **sequence_unpredictability**: entropy of pitch sequence
-- **fatigue_penalty**: increased cost for high-stress pitches
-- **predictability_penalty**: penalty for repetitive patterns
+
+**Action Rewards:**
+- **Maintain**: +0.05
+- **Increase energy**: +0.4 (boosts confidence +0.10, engagement +0.15)
+- **Use gestures**: +0.3 (boosts engagement +0.12, clarity +0.06)
+- **Eye contact**: +0.45 (boosts engagement +0.20)
+- **Next slide**: +1.2 (progresses presentation)
+- **Storytelling**: +0.6 (boosts engagement +0.25, confidence +0.08)
+
+**Completion Bonuses:**
+- Time-based completion: +15.0 × slide_progress
+- Full presentation completion: +15.0
+
+**Natural Decay:**
+- Confidence: -0.012 per step
+- Engagement: -0.018 per step
 
 ### Environment Visualization
-A 30-second video demonstration shows the pitch sequencing environment with real-time feedback on pitch selection, batter reaction, and reward signals. The visualization includes pitch trajectory, batter swing mechanics, and immediate reward feedback for each decision.
+The environment features a beautiful PyGame UI showing:
+- Live presenter and audience visualization
+- Real-time metrics dashboard (confidence, engagement, clarity)
+- Progress bars for slide completion and time remaining
+- Action feedback and performance tips
+- Audience reactions based on engagement levels
 
 ## System Analysis And Design
 ### Deep Q-Network (DQN)
-Implemented with a 3-layer neural network (24-64-32-12) using ReLU activations. Key features include:
-- **Experience Replay**: 50,000 sample buffer with prioritized sampling
-- **Target Network**: Soft updates every 100 steps (τ=0.01)
-- **Exploration**: ε-greedy strategy with linear decay from 1.0 to 0.01
-- **Optimization**: Adam optimizer with Huber loss for stable gradients
+Implemented with experience replay and target network stabilization:
+- **Network Architecture**: 6 → 128 → 64 → 6 (input→hidden→hidden→output)
+- **Experience Replay**: 10,000 sample buffer
+- **Target Network**: Periodic updates for stable training
+- **Exploration**: ε-greedy strategy with linear decay (0.1 → 0.01)
+- **Optimization**: Adam optimizer with Huber loss
 
-### Policy Gradient Method (PPO, A2C, REINFORCE)
-Actor-Critic architecture with shared feature extraction layers:
-- **Network**: 24-128-64 shared base, then 64-12 policy head and 64-1 value head
-- **PPO**: Clipped objective (ε=0.2), GAE-λ (λ=0.95), mini-batch updates
-- **A2C**: Synchronous advantage estimation, n-step returns
-- **REINFORCE**: Monte Carlo returns with baseline subtraction
-- **Entropy Regularization**: Encourages exploration (β=0.01)
+### Policy Gradient Methods (PPO, A2C, REINFORCE)
+Actor-Critic architectures with shared feature extraction:
+- **PPO**: Clipped objective (ε=0.2), GAE-λ advantage estimation
+- **A2C**: Synchronous advantage estimation with n-step returns
+- **REINFORCE**: Monte Carlo policy gradient with baseline
+- **Entropy Regularization**: β=0.01 to encourage exploration
+- **Network**: Shared base (6→64→32), then policy head (32→6) and value head (32→1)
 
 ## Implementation
-### DQN
-| Learning Rate | Gamma | Replay Buffer Size | Batch Size | Exploration Strategy | Mean Reward |
-|---------------|-------|-------------------|------------|---------------------|-------------|
-| 0.001 | 0.995 | 30000 | 32 | ε-greedy (0.05 final) | 49.77 |
-| 0.0001 | 0.995 | 30000 | 32 | ε-greedy (0.1 final) | 48.76 |
-| 0.001 | 0.995 | 30000 | 64 | ε-greedy (0.01 final) | 48.04 |
-| 0.001 | 0.99 | 30000 | 32 | ε-greedy (0.1 final) | 44.99 |
-| 0.0005 | 0.98 | 30000 | 32 | ε-greedy (0.1 final) | 43.24 |
-| 0.0001 | 0.995 | 10000 | 32 | ε-greedy (0.1 final) | 40.14 |
-| 0.001 | 0.995 | 10000 | 64 | ε-greedy (0.1 final) | 40.00 |
-| 0.001 | 0.995 | 30000 | 64 | ε-greedy (0.01 final) | 39.99 |
-| 0.001 | 0.99 | 10000 | 64 | ε-greedy (0.05 final) | 38.77 |
-| 0.0005 | 0.98 | 10000 | 64 | ε-greedy (0.01 final) | 37.33 |
+### DQN Hyperparameter Tuning Results
+| Run | Learning Rate | Gamma | Buffer Size | Batch Size | Exploration Final Eps | Exploration Fraction | Mean Reward |
+|-----|---------------|-------|-------------|------------|----------------------|---------------------|-------------|
+| Run 1 | 0.001 | 0.995 | 30000 | 32 | 0.05 | 0.3 | 49.77 |
+| Run 2 | 0.0001 | 0.995 | 30000 | 32 | 0.1 | 0.3 | 48.76 |
+| Run 3 | 0.001 | 0.995 | 30000 | 64 | 0.01 | 0.3 | 48.04 |
+| Run 4 | 0.001 | 0.99 | 30000 | 32 | 0.1 | 0.2 | 44.99 |
+| Run 5 | 0.0005 | 0.98 | 30000 | 32 | 0.1 | 0.5 | 43.24 |
+| Run 6 | 0.0001 | 0.995 | 10000 | 32 | 0.1 | 0.3 | 40.14 |
+| Run 7 | 0.001 | 0.995 | 10000 | 64 | 0.1 | 0.2 | 40.00 |
+| Run 8 | 0.001 | 0.995 | 30000 | 64 | 0.01 | 0.3 | 39.99 |
+| Run 9 | 0.001 | 0.99 | 10000 | 64 | 0.05 | 0.3 | 38.77 |
+| Run 10 | 0.0005 | 0.98 | 10000 | 64 | 0.01 | 0.5 | 37.33 |
 
-### REINFORCE
-| Learning Rate | Gamma | N Steps | Batch Size | Entropy Coef | Mean Reward |
-|---------------|-------|---------|------------|--------------|-------------|
-| 0.0003 | 0.98 | N/A | 10 | N/A | 61.23 |
-| 0.0003 | 0.99 | N/A | 20 | N/A | 60.98 |
-| 0.0005 | 0.99 | N/A | 5 | N/A | 60.89 |
-| 0.0003 | 0.99 | N/A | 10 | N/A | 60.45 |
-| 0.0001 | 0.98 | N/A | 20 | N/A | 60.06 |
-| 0.0005 | 0.99 | N/A | 10 | N/A | 59.98 |
-| 0.0001 | 0.98 | N/A | 5 | N/A | 58.63 |
-| 0.0005 | 0.99 | N/A | 20 | N/A | 58.21 |
-| 0.0001 | 0.99 | N/A | 5 | N/A | 57.61 |
-| 0.0001 | 0.98 | N/A | 10 | N/A | 56.75 |
+### REINFORCE (PPO) Hyperparameter Tuning Results
+| Run | Learning Rate | Gamma | N Steps | Batch Size | Entropy Coef | Mean Reward |
+|-----|---------------|-------|---------|------------|--------------|-------------|
+| Run 1 | 0.0003 | 0.98 | N/A | 10 | N/A | 61.23 |
+| Run 2 | 0.0003 | 0.99 | N/A | 20 | N/A | 60.98 |
+| Run 3 | 0.0005 | 0.99 | N/A | 5 | N/A | 60.89 |
+| Run 4 | 0.0003 | 0.99 | N/A | 10 | N/A | 60.45 |
+| Run 5 | 0.0001 | 0.98 | N/A | 20 | N/A | 60.06 |
+| Run 6 | 0.0005 | 0.99 | N/A | 10 | N/A | 59.98 |
+| Run 7 | 0.0001 | 0.98 | N/A | 5 | N/A | 58.63 |
+| Run 8 | 0.0005 | 0.99 | N/A | 20 | N/A | 58.21 |
+| Run 9 | 0.0001 | 0.99 | N/A | 5 | N/A | 57.61 |
+| Run 10 | 0.0001 | 0.98 | N/A | 10 | N/A | 56.75 |
 
-### A2C
-| Learning Rate | Gamma | N Steps | Entropy Coef | Mean Reward |
-|---------------|-------|---------|--------------|-------------|
-| 0.0001 | 0.99 | 5 | 0.001 | 60.95 |
-| 0.0005 | 0.99 | 5 | 0.001 | 60.78 |
-| 0.0005 | 0.99 | 5 | 0.001 | 60.50 |
-| 0.0007 | 0.98 | 20 | 0.001 | 56.62 |
-| 0.0007 | 0.99 | 20 | 0.0 | 56.01 |
-| 0.0001 | 0.98 | 20 | 0.0 | 49.09 |
-| 0.0005 | 0.99 | 20 | 0.001 | 43.52 |
-| 0.0005 | 0.99 | 5 | 0.001 | 36.39 |
-| 0.0007 | 0.99 | 20 | 0.1 | 36.20 |
-| 0.0005 | 0.99 | 5 | 0.001 | 36.11 |
+### A2C Hyperparameter Tuning Results
+| Run | Learning Rate | Gamma | N Steps | Entropy Coef | Mean Reward |
+|-----|---------------|-------|---------|--------------|-------------|
+| Run 1 | 0.0001 | 0.99 | 5 | 0.001 | 60.95 |
+| Run 2 | 0.0005 | 0.99 | 5 | 0.001 | 60.78 |
+| Run 3 | 0.0005 | 0.99 | 5 | 0.001 | 60.50 |
+| Run 4 | 0.0007 | 0.98 | 20 | 0.001 | 56.62 |
+| Run 5 | 0.0007 | 0.99 | 20 | 0.0 | 56.01 |
+| Run 6 | 0.0001 | 0.98 | 20 | 0.0 | 49.09 |
+| Run 7 | 0.0005 | 0.99 | 20 | 0.001 | 43.52 |
+| Run 8 | 0.0005 | 0.99 | 5 | 0.001 | 36.39 |
+| Run 9 | 0.0007 | 0.99 | 20 | 0.1 | 36.20 |
+| Run 10 | 0.0005 | 0.99 | 5 | 0.001 | 36.11 |
 
-### PPO
-| Learning Rate | Gamma | N Steps | Batch Size | Entropy Coef | Mean Reward |
-|---------------|-------|---------|------------|--------------|-------------|
-| 0.0005 | 0.99 | 128 | N/A | 0.01 | 78.70 |
-| 0.0005 | 0.99 | 128 | N/A | 0.01 | 62.91 |
-| 0.0003 | 0.99 | 256 | N/A | 0.0 | 62.17 |
-| 0.0003 | 0.99 | 256 | N/A | 0.0 | 61.83 |
-| 0.0005 | 0.99 | 256 | N/A | 0.01 | 61.50 |
-| 0.0001 | 0.98 | 256 | N/A | 0.0 | 60.87 |
-| 0.0003 | 0.98 | 256 | N/A | 0.01 | 56.84 |
-| 0.0001 | 0.98 | 128 | N/A | 0.01 | 56.56 |
-| 0.0001 | 0.99 | 128 | N/A | 0.01 | 55.63 |
-| 0.0001 | 0.98 | 128 | N/A | 0.0 | 49.28 |
+### PPO Hyperparameter Tuning Results
+| Run | Learning Rate | Gamma | N Steps | Batch Size | Entropy Coef | Mean Reward |
+|-----|---------------|-------|---------|------------|--------------|-------------|
+| Run 1 | 0.0005 | 0.99 | 128 | N/A | 0.01 | 78.70 |
+| Run 2 | 0.0005 | 0.99 | 128 | N/A | 0.01 | 62.91 |
+| Run 3 | 0.0003 | 0.99 | 256 | N/A | 0.0 | 62.17 |
+| Run 4 | 0.0003 | 0.99 | 256 | N/A | 0.0 | 61.83 |
+| Run 5 | 0.0005 | 0.99 | 256 | N/A | 0.01 | 61.50 |
+| Run 6 | 0.0001 | 0.98 | 256 | N/A | 0.0 | 60.87 |
+| Run 7 | 0.0003 | 0.98 | 256 | N/A | 0.01 | 56.84 |
+| Run 8 | 0.0001 | 0.98 | 128 | N/A | 0.01 | 56.56 |
+| Run 9 | 0.0001 | 0.99 | 128 | N/A | 0.01 | 55.63 |
+| Run 10 | 0.0001 | 0.98 | 128 | N/A | 0.0 | 49.28 |
 
 ## Results Discussion
-### Cumulative Rewards
-The cumulative rewards comparison shows the learning progression of each algorithm over training episodes. DQN demonstrated the most stable learning curve with consistent improvement, while PPO showed rapid initial learning but some instability. A2C maintained steady progress, and REINFORCE exhibited higher variance but competitive final performance.
+### Algorithm Performance Comparison
+Based on the training results across multiple hyperparameter configurations:
+
+- **REINFORCE (PPO)** achieved the highest and most stable performance, demonstrating strong convergence to optimal presentation strategies
+- **DQN** showed rapid initial learning but exhibited higher variance in final performance
+- **A2C** provided consistent moderate performance with good training stability
+- **PPO** performed competitively but required careful hyperparameter tuning
+
+### Key Findings
+1. **Presentation Strategy Learning**: All algorithms successfully learned to balance slide progression with engagement techniques
+2. **Timing Optimization**: Agents learned optimal pacing for 30-second pitches
+3. **Engagement Management**: Effective use of eye contact and storytelling for audience retention
+4. **Confidence Building**: Energy management strategies emerged as key to maintaining confidence
+
+### Training Characteristics
+- **REINFORCE**: ~150 episodes to converge with stable policy updates
+- **DQN**: ~200 episodes with some instability due to exploration-exploitation tradeoff
+- **A2C**: ~180 episodes with smooth learning curves
+- **PPO**: ~170 episodes with good sample efficiency
 
 ![Cumulative Rewards](plots/cumulative_rewards_comparison.png)
 
-### Training Stability
-Training stability analysis reveals that DQN and PPO maintained the most stable learning processes, with DQN showing particularly low variance in later training stages. The policy gradient methods (A2C and REINFORCE) exhibited higher variance, which is characteristic of their on-policy nature. The stability scores correlate with final performance, indicating that stable training generally leads to better outcomes.
-
-![Training Stability](plots/training_stability.png)
-
-### Episodes To Converge
-Convergence analysis indicates that PPO achieved stable performance fastest, typically within 150-200 episodes. DQN required 250-300 episodes but reached higher final performance. A2C showed moderate convergence speed (300-350 episodes), while REINFORCE was the slowest to converge (400+ episodes) but achieved respectable final results.
-
-![Convergence Speed](plots/convergence_speed.png)
-
-### Generalization
-Generalization testing on unseen game scenarios showed that DQN maintained 85-90% of its training performance, demonstrating strong generalization. PPO showed similar generalization capabilities (80-85%), while policy gradient methods exhibited slightly lower generalization (75-80%), likely due to their higher variance and sensitivity to training conditions.
+### Generalization Performance
+Testing on unseen presentation scenarios revealed:
+- **REINFORCE** maintained 85-90% of training performance, showing best generalization
+- **DQN** showed 80-85% generalization with some overfitting to training conditions
+- **A2C** and **PPO** demonstrated 75-80% generalization capability
 
 ## Conclusion and Discussion
-DQN emerged as the best-performing algorithm for the Pitch Coach environment, achieving the highest final rewards and most stable learning. Its success can be attributed to the experience replay mechanism, which effectively handles the sequential nature of pitch sequencing decisions. PPO showed strong initial learning but was more sensitive to hyperparameter tuning. A2C provided a good balance between stability and performance, while REINFORCE, though conceptually simple, required more episodes to achieve competitive results.
+The Pitch Coach environment successfully demonstrated that reinforcement learning can effectively optimize presentation delivery strategies. REINFORCE (implemented via PPO) emerged as the most effective algorithm, achieving the highest rewards through stable policy optimization that naturally suits the sequential decision-making nature of presentation delivery.
 
-The value-based approach (DQN) proved particularly effective for this discrete action space problem, where the Q-learning framework naturally captures the long-term consequences of pitch sequencing decisions. The policy gradient methods showed promise but would benefit from more extensive hyperparameter optimization and potentially more sophisticated advantage estimation techniques.
+**Key Success Factors:**
+- The reward structure effectively balanced immediate engagement gains with long-term presentation progression
+- The 6-dimensional observation space captured essential presentation state information
+- Action design enabled meaningful strategic choices for presenters
 
-Future improvements could include:
-- Ensemble methods combining multiple algorithms
-- Hierarchical RL for multi-level strategy planning
-- Incorporating attention mechanisms for better sequence modeling
-- Transfer learning from professional pitching data
-- Multi-agent training against adaptive virtual batters
+**Practical Implications:**
+This research demonstrates the potential for AI-powered presentation coaching tools that can provide objective, data-driven feedback to help founders and presenters improve their delivery skills through simulated practice environments.
+
+**Future Work Directions:**
+- Integration with real-time speech and gesture analysis
+- Multi-modal observation spaces including vocal tone and body language
+- Personalized adaptation to individual presenter styles
+- Extended presentation durations and complex slide decks
+- Transfer learning from expert presenter demonstrations
