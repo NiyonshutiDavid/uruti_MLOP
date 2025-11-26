@@ -1,6 +1,8 @@
 # Reinforcement Learning Summative Assignment Report
 **Student Name:** David Niyonshuti
+
 **Video Recording:** https://youtu.be/PjTQsvmc1mY
+
 **GitHub Repository:** https://github.com/NiyonshutiDavid/uruti_MLOP/tree/main/uruti-reinforcedLearning
 
 ## Project Overview
