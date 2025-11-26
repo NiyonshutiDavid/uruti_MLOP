@@ -150,25 +150,69 @@ Based on the training results across multiple hyperparameter configurations:
 - **A2C** provided consistent moderate performance with good training stability
 - **PPO** performed competitively but required careful hyperparameter tuning
 
-### Key Findings
-1. **Presentation Strategy Learning**: All algorithms successfully learned to balance slide progression with engagement techniques
-2. **Timing Optimization**: Agents learned optimal pacing for 30-second pitches
-3. **Engagement Management**: Effective use of eye contact and storytelling for audience retention
-4. **Confidence Building**: Energy management strategies emerged as key to maintaining confidence
+![Cumulative Rewards](plots/cumulative_rewards_comparison.png)
 
-### Training Characteristics
+*Figure 1: Cumulative rewards comparison across algorithms*
+
+### Training Stability Analysis
+The stability analysis reveals important characteristics of each algorithm's learning process:
+
+- **REINFORCE** demonstrated the most stable learning curve with consistent policy improvements
+- **DQN** showed moderate stability with some oscillations due to the exploration-exploitation tradeoff
+- **A2C** maintained steady progress throughout training
+- **PPO** exhibited good stability after the initial learning phase
+
+![Training Stability](plots/training_stability.png)
+
+*Figure 2: Training stability analysis across algorithms*
+
+### Convergence Speed
+Convergence analysis shows how quickly each algorithm reached stable performance:
+
 - **REINFORCE**: ~150 episodes to converge with stable policy updates
 - **DQN**: ~200 episodes with some instability due to exploration-exploitation tradeoff
 - **A2C**: ~180 episodes with smooth learning curves
 - **PPO**: ~170 episodes with good sample efficiency
 
-![Cumulative Rewards](plots/cumulative_rewards_comparison.png)
+![Convergence Speed](plots/convergence_speed.png)
+
+*Figure 3: Convergence speed comparison across algorithms*
+
+### Action Distribution Analysis
+Analysis of action selection patterns reveals distinct behavioral strategies:
+
+- **REINFORCE** favored engagement-focused actions (eye contact, storytelling)
+- **DQN** showed more balanced exploration across all action types
+- **A2C** strongly preferred high-impact actions like energy increase and eye contact
+- **PPO** demonstrated strategic action selection with emphasis on engagement techniques
+
+![Action Distribution](plots/action_distribution_analysis.png)
+
+*Figure 4: Action distribution analysis across algorithms*
 
 ### Generalization Performance
-Testing on unseen presentation scenarios revealed:
-- **REINFORCE** maintained 85-90% of training performance, showing best generalization
-- **DQN** showed 80-85% generalization with some overfitting to training conditions
-- **A2C** and **PPO** demonstrated 75-80% generalization capability
+Testing on unseen presentation scenarios revealed generalization capabilities:
+
+- **REINFORCE** maintained 91% of training performance, showing excellent generalization
+- **PPO** demonstrated 91% generalization capability, matching REINFORCE
+- **DQN** showed 87% generalization with some performance drop
+- **A2C** maintained 88% of training performance
+
+![Generalization Analysis](plots/generalization_analysis.png)
+
+*Figure 5: Generalization analysis across algorithms*
+
+### Hyperparameter Sensitivity
+Hyperparameter analysis revealed key insights:
+
+- **Learning rate** was the most critical parameter across all algorithms
+- **Gamma** (discount factor) showed moderate correlation with final performance
+- **Exploration parameters** significantly impacted DQN performance
+- **Entropy coefficient** played a crucial role in policy gradient methods
+
+![Hyperparameter Analysis](plots/performance_summary.png)
+
+*Figure 6: Performance summary across all algorithms*
 
 ## Conclusion and Discussion
 The Pitch Coach environment successfully demonstrated that reinforcement learning can effectively optimize presentation delivery strategies. REINFORCE (implemented via PPO) emerged as the most effective algorithm, achieving the highest rewards through stable policy optimization that naturally suits the sequential decision-making nature of presentation delivery.
@@ -177,6 +221,11 @@ The Pitch Coach environment successfully demonstrated that reinforcement learnin
 - The reward structure effectively balanced immediate engagement gains with long-term presentation progression
 - The 6-dimensional observation space captured essential presentation state information
 - Action design enabled meaningful strategic choices for presenters
+
+**Algorithm-Specific Insights:**
+- **REINFORCE/PPO**: Excellent for stable policy learning in presentation contexts
+- **DQN**: Good for exploration but requires careful tuning for presentation tasks
+- **A2C**: Reliable performer with consistent learning characteristics
 
 **Practical Implications:**
 This research demonstrates the potential for AI-powered presentation coaching tools that can provide objective, data-driven feedback to help founders and presenters improve their delivery skills through simulated practice environments.
@@ -187,3 +236,4 @@ This research demonstrates the potential for AI-powered presentation coaching to
 - Personalized adaptation to individual presenter styles
 - Extended presentation durations and complex slide decks
 - Transfer learning from expert presenter demonstrations
+- Multi-agent environments for competitive pitch scenarios
