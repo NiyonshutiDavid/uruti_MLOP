@@ -1,341 +1,216 @@
 # **Pitch Coach – Reinforcement Learning for Presentation Skills**
-
-An AI-powered reinforcement learning system designed to help founders and presenters improve their pitch delivery. Pitch Coach simulates a dynamic presentation environment where an RL agent learns to optimize confidence, engagement, clarity, and pacing—ultimately providing meaningful feedback for better pitch performance.
-
+**An AI-powered presentation coaching environment where RL agents learn to master the art of public speaking.**
 ---
 
-## 📋 **Table of Contents**
+## 📋 Table of Contents
 
 * [Project Overview](#-project-overview)
+* [Installation & Setup](#-installation--setup)
+* [Usage (CLI Control Panel)](#-usage)
+* [Reproducing Results](#-reproducing-results)
 * [Environment Description](#-environment-description)
-* [System Architecture](#-system-architecture)
-* [Installation & Setup](#️-installation--setup)
 * [Project Structure](#-project-structure)
-* [Usage](#-usage)
-* [Training Results](#-training-results)
-* [Report Structure](#-report-structure)
-* [Demo & Visualization](#-demo--visualization)
-* [Troubleshooting](#-troubleshooting)
-* [License](#-license)
-* [Acknowledgments](#-acknowledgments)
+* [Results Summary](#-results-summary)
+* [Credits & License](#-credits--license)
 
 ---
 
-## 🎯 **Project Overview**
+## 📋 Project Overview
 
-Pitch Coach addresses a common challenge: **many founders struggle to deliver compelling pitches**, often lacking objective feedback mechanisms to improve their delivery.
+**Pitch Coach** addresses a critical challenge for founders and presenters: the lack of objective, real-time feedback on delivery skills.
 
-### **Solution**
+This project implements a custom Gymnasium environment where an agent (the presenter) must balance **Energy**, **Engagement**, and **Pacing** to deliver a successful pitch. Four Reinforcement Learning algorithms (**PPO**, **REINFORCE**, **DQN**, and **A2C**) were trained and compared to solve this stochastic optimization problem.
 
-A simulated pitch environment where reinforcement learning agents learn effective presentation strategies through real-time feedback on:
+**Key Findings:**
 
-* Confidence
-* Audience engagement
-* Message clarity
-* Pacing & slide progression
+  * 🏆 **PPO & REINFORCE** achieved the highest performance (Mean Reward \~49.2), successfully learning to balance audience engagement with slide completion.
+  * 📉 **DQN** struggled with the sequential nature of the task, showing the lowest stability.
+  * 📊 **A2C** showed high variance in training stability.
 
-The system uses **Stable-Baselines3** and implements **DQN, PPO (REINFORCE), and A2C** to determine the best-performing RL method in this interactive skill-learning context.
+-----
 
----
+## ⚙️ Installation & Setup
 
-## 🎮 **Environment Description**
+This project is designed to run locally. Follow these steps to set up the environment.
 
-### **Agent**
-
-The agent simulates a presenter delivering a pitch and can:
-
-* Adjust presentation style and energy
-* Manage slide transitions
-* Use engagement techniques (gestures, eye contact, storytelling)
-* Adapt based on audience feedback
-* Optimize clarity, engagement, and confidence
-
----
-
-### **Action Space (Discrete – 6 Actions)**
-
-| Action | Description                 |
-| ------ | --------------------------- |
-| 0      | Maintain presentation style |
-| 1      | Increase energy             |
-| 2      | Use gestures                |
-| 3      | Make eye contact            |
-| 4      | Next slide                  |
-| 5      | Add storytelling            |
-
----
-
-### **Observation Space (6-D Continuous Vector)**
-
-`[confidence, engagement, clarity, pace, slide_progress, time_remaining]`
-
-* **confidence** (0–1)
-* **engagement** (0–1)
-* **clarity** (0–1)
-* **pace** (0–2)
-* **slide_progress** (0–1)
-* **time_remaining** (0–1)
-
----
-
-### **Reward Function**
-
-```
-R(s,a) = R_action(a) + 0.1 * (0.3*confidence + 0.4*engagement + 0.3*clarity)
-```
-
-**Bonuses**
-
-* +10 × slide_progress
-* +10 for completing the full presentation
-
-**Penalties**
-
-* Natural decay: -0.02 to -0.03 per step
-* Invalid slide advance: -0.2
-
----
-
-## 🏗️ **System Architecture**
-
-### **Deep Q-Network (DQN)**
-
-* Input: 6 features
-* Hidden layers: 128 → 64
-* Outputs: Q-values for 6 actions
-* Experience Replay (10,000)
-* Target Network
-* Epsilon-Greedy (0.1 → 0.01)
-* Huber Loss
-
----
-
-### **PPO (REINFORCE)**
-
-* Actor: 64 → 32 → softmax(6)
-* Critic: 64 → 32 → state value
-* Features:
-
-  * Clipped objective
-  * GAE
-  * Entropy regularization (β=0.01)
-
----
-
-### **A2C**
-
-* Shared feature extractor (128 units)
-* Actor & Critic heads
-* 5 parallel workers
-* N-step returns
-
----
-
-## ⚙️ **Installation & Setup**
-
-### **Prerequisites**
-
-* Python 3.8+
-* `pip`
-
----
-
-### **Quick Install**
+### 1\. Clone the Repository
 
 ```bash
-# Clone repository
-git clone https://github.com/your-username/pitch-coach-rl.git
-cd pitch-coach-rl
+git clone https://github.com/NiyonshutiDavid/uruti_MLOP.git
+cd uruti_MLOP/uruti-reinforcedLearning
+```
 
-# Create environment
+### 2\. Create a Virtual Environment
+
+It is recommended to use a virtual environment to manage dependencies.
+
+```bash
+# macOS/Linux
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Windows
 python -m venv .venv
-source .venv/bin/activate   # Windows: .venv\Scripts\activate
+.venv\Scripts\activate
+```
 
-# Install dependencies
+### 3\. Install Dependencies
+
+Install all required packages from the `requirements.txt` file.
+
+```bash
 pip install -r requirements.txt
-
-# Test installation
-python test_core_functionality.py
 ```
 
----
+*Note: If you encounter audio-related errors on Linux/macOS, you may need to install `portaudio` (e.g., `brew install portaudio`).*
 
-### **Manual Dependency Installation**
+-----
+
+## 🚀 Usage
+
+The system is controlled via a centralized Command Line Interface (CLI).
+
+### Start the Control Panel
+
+Run the main script to access the interactive menu:
 
 ```bash
-pip install torch==2.1.0
-pip install gymnasium==0.29.1
-pip install stable-baselines3==2.0.0
-
-# Visualization
-pip install pygame opencv-python matplotlib
-
-# Utilities
-pip install numpy pandas tensorboard
-
-# (Optional) Audio
-brew install portaudio
-pip install pyaudio
+python main.py
 ```
 
----
+You will see the following dashboard:
 
-## 📂 **Project Structure**
-
-```
-pitch-coach-rl/
-├── environment/
-│   ├── pitch_env.py
-│   └── simple_pitch_env.py
-├── utils/
-│   ├── visualization.py
-│   └── audio_processor.py
-├── train.py
-├── plat.py
-├── run_play.py
-├── training_config.json
-└── requirements.txt
+```text
+╔════════════════════════════════════════════════════════════════════╗
+║ PITCH COACH CONTROL PANEL                                          ║
+╠════════════════════════════════════════════════════════════════════╣
+║ 1: Run trained agent demonstration 🚀                              ║
+║ 2: Train new models 🤖                                             ║
+║ 3: Run random action demo 🎲                                       ║
+║ 4: System information 📊                                           ║
+║ 5: Exit 👋                                                         ║
+╚════════════════════════════════════════════════════════════════════╝
 ```
 
----
+### 🎮 Modes of Operation
 
-## 🚀 **Usage**
+1.  **Run Trained Agent (Demo)**
 
-### **Training**
+      * Selects the best-saved model (PPO/REINFORCE) and visualizes the agent delivering a pitch in real-time.
+      * **Visuals:** Displays the PyGame UI with the presenter, audience reactions, and live metric bars.
+
+2.  **Train New Models**
+
+      * Allows you to train a specific algorithm (DQN, PPO, A2C, or REINFORCE) from scratch.
+      * Configuration files from the `configs/` directory are used to set hyperparameters.
+
+3.  **Random Action Demo**
+
+      * Simulates the environment with an untrained agent taking random actions. Useful for verifying the environment logic and UI rendering without model inference.
+
+-----
+
+## 🔬 Reproducing Results
+
+To reproduce the extensive hyperparameter sweep and analysis presented in the report, use the provided shell scripts and reporting tools.
+
+### 1\. Run Hyperparameter Sweep (40 Runs)
+
+We performed 10 runs for each of the 4 algorithms using different hyperparameter configurations. To replicate this:
 
 ```bash
-# Train DQN
-python train.py --algorithm dqn --config training_config.json
-
-# Train all algorithms
-python train.py --algorithm all --config training_config.json
-
-# Custom training
-python train.py --algorithm reinforce --total_timesteps 50000
+chmod +x run_all_40.sh
+./run_all_40.sh
 ```
 
----
+*This script will iterate through all JSON files in `configs/`, train the models, and save the results to `runs/` and the best models to `models/`.*
 
-### **Evaluate Models**
+### 2\. Generate Analysis Reports
+
+Once training is complete, generate the comparison plots and tables:
 
 ```bash
-python plat.py --model experiments/dqn_model.zip --algorithm dqn --save-video
-
-python run_play.py   # Interactive selector
-
-python plat.py --model experiments/reinforce_model.zip --record-audio --save-video
+python generate_report.py
 ```
 
----
+This will create:
 
-### **Monitor Training**
+  * **Plots:** `reports/plots/` (Cumulative Rewards, Convergence Speed, Stability, etc.)
+  * **Tables:** `reports/tables/` (Detailed CSV metrics for every run)
+  * **Final Report:** `reports/final_report.pdf`
 
-```bash
-tensorboard --logdir experiments/
+-----
+
+## 🧠 Environment Description
+
+The agent operates in a custom Gymnasium environment representing a stage.
+
+### **Observation Space (6-Dim)**
+
+| Index | Feature | Range | Description |
+|:-----:|:--------|:-----:|:------------|
+| 0 | `confidence` | 0.0 - 1.0 | Presenter's internal confidence metric |
+| 1 | `engagement` | 0.0 - 1.0 | Current audience interest level |
+| 2 | `clarity` | 0.0 - 1.0 | How well the message is being received |
+| 3 | `pace` | 0.0 - 2.0 | Speech speed (1.0 is optimal) |
+| 4 | `slide_progress`| 0.0 - 1.0 | % of the presentation completed |
+| 5 | `time_remaining`| 0.0 - 1.0 | Time left in the session |
+
+### **Action Space (Discrete)**
+
+  * `0`: **Maintain** (Stabilize pace)
+  * `1`: **Increase Energy** (Boosts engagement, costs stamina)
+  * `2`: **Use Gestures** (Improves clarity)
+  * `3`: **Eye Contact** (Boosts engagement)
+  * `4`: **Next Slide** (Progresses presentation)
+  * `5`: **Storytelling** (High reward, high cost)
+
+-----
+
+## 📂 Project Structure
+
+```text
+uruti-reinforcedLearning/
+├── environment/           # Custom Gymnasium Environment
+│   ├── pitch_env.py       # Main environment logic (Rewards, States)
+│   └── visualization.py   # PyGame rendering engine
+├── models/                # Saved trained models (Best performers)
+│   ├── ppo/               # PPO Checkpoints
+│   ├── reinforce/         # REINFORCE Checkpoints
+│   └── ...
+├── configs/               # Hyperparameter JSON configurations
+│   ├── ppo/run_*.json
+│   └── ...
+├── reports/               # Generated analysis
+│   ├── plots/             # Analysis graphs (matplotlib/seaborn)
+│   └── tables/            # CSV results of all 40 runs
+├── main.py                # CLI Entry Point
+├── train.py               # Training script (Stable Baselines3)
+├── play_demo.py           # Inference script for demo
+├── run_all_40.sh          # Batch script for experiments
+└── requirements.txt       # Python dependencies
 ```
 
----
+-----
 
-## 📊 **Training Results**
+## 📊 Results Summary
 
-### **DQN Hyperparameters (Sample of 10 Runs)**
+Our extensive analysis of 40 training runs yielded the following insights:
 
-| LR     | Gamma | Buffer | Batch | Exploration | Mean Reward |
-| ------ | ----- | ------ | ----- | ----------- | ----------- |
-| 0.0001 | 0.99  | 10000  | 32    | 0.1→0.01    | 8.45        |
-| …      | …     | …      | …     | …           | …           |
+  * **Best Algorithm:** **PPO** (Proximal Policy Optimization)
+      * *Score:* Highest Max Reward (**78.7**) and most consistent Mean Reward.
+      * *Behavior:* Learned to strategically use "Next Slide" while maintaining high "Engagement".
+  * **Fastest Learner:** **REINFORCE**
+      * *Convergence:* Converged in **\~638 episodes**, significantly faster than DQN (\~1057).
+  * **Visualizations:**
+      * Check `reports/plots/cumulative_rewards_comparison.png` for performance ranking.
+      * Check `reports/plots/action_distribution_analysis.png` to see how PPO learned a balanced strategy vs DQN's repetitive actions.
 
-*(Full table included in your report section)*
+-----
 
----
+## 👥 Credits & License
 
-### **REINFORCE (PPO)** and **A2C** results also included with full tables.
+**Student:** David Niyonshuti
+**Course:** Machine Learning Techniques II (Summative Assignment)
 
----
-
-## 📈 **Results Discussion**
-
-### **Summary**
-
-* **REINFORCE (PPO)** achieved the highest and most stable performance.
-* **DQN** learned faster initially but showed high variance.
-* **A2C** performed moderately with smooth improvements.
-* REINFORCE generalized best to unseen scenarios.
-
-### **Convergence**
-
-* **REINFORCE**: ~150 episodes
-* **DQN**: ~200 episodes
-* **A2C**: ~180 episodes
-
----
-
-## 📋 **Report Structure (For Students)**
-
-Includes:
-
-* Project Overview
-* Environment Description
-* System Analysis & Design
-* Implementation (hyperparameter tables)
-* Results Discussion
-* Conclusion & Future Work
-
-*(All sections rewritten clearly in the README for reference.)*
-
----
-
-## 🎥 **Demo & Visualization**
-
-### **Screenshots**
-
-* Training curves
-* Agent demo
-* Environment visualization
-
-(Images stored in `/docs/images/`)
-
-### **Video Demo**
-
-A 3-minute video showing:
-
-* Agent interacting with the environment
-* Real-time metric changes
-* Performance reporting
-
----
-
-## 🛠️ **Troubleshooting**
-
-```bash
-# Pygame issues
-python test_pygame.py
-
-# Audio issues
-brew install portaudio
-pip install pyaudio
-
-# Model loading problems
-python run_play.py
-```
-
-**Performance Tips**
-
-* Use GPU for training
-* Reduce environment complexity for quick debugging
-* Lower total_timesteps for faster experiments
-
----
-
-## 📄 **License**
-
-This project is licensed under the **MIT License**.
-
----
-
-## 🙏 **Acknowledgments**
-
-* Stable-Baselines3 developers
-* Gymnasium contributors
-* Pygame community
-
+This project is an additional feature being developed to be integrated into Uruti
