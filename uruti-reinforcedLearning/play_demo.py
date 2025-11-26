@@ -31,7 +31,7 @@ class PitchCoachDemo:
         elif algorithm == 'a2c':
             self.model = A2C.load(model_path)
         elif algorithm == 'reinforce':
-            self.model = PPO.load(model_path)  # REINFORCE uses PPO in your setup
+            self.model = PPO.load(model_path)  #
         else:
             raise ValueError(f"Unsupported algorithm: {algorithm}")
         
