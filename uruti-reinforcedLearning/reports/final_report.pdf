@@ -145,58 +145,48 @@ Actor-Critic architectures with shared feature extraction:
 ### Algorithm Performance Comparison
 Based on the training results across multiple hyperparameter configurations:
 
-- **REINFORCE (PPO)** achieved the highest and most stable performance, demonstrating strong convergence to optimal presentation strategies
-- **DQN** showed rapid initial learning but exhibited higher variance in final performance
-- **A2C** provided consistent moderate performance with good training stability
-- **PPO** performed competitively but required careful hyperparameter tuning
+- **PPO** achieved the highest overall performance with a Mean Final Reward of **49.24** and the highest singular Best Reward of **78.70**, demonstrating it found the most optimal policy.
+- **REINFORCE** was statistically equivalent, achieving a Mean Final Reward of **49.12**.
+- **A2C** (37.03) and **DQN** (34.22) lagged significantly behind, suggesting that policy gradient methods were better suited for this environment.
 
 ![Cumulative Rewards](plots/cumulative_rewards_comparison.png)
 
 *Figure 1: Cumulative rewards comparison across algorithms*
 
 ### Training Stability Analysis
-The stability analysis reveals important characteristics of each algorithm's learning process:
+The stability analysis highlights differences in learning consistency:
 
-- **REINFORCE** demonstrated the most stable learning curve with consistent policy improvements
-- **DQN** showed moderate stability with some oscillations due to the exploration-exploitation tradeoff
-- **A2C** maintained steady progress throughout training
-- **PPO** exhibited good stability after the initial learning phase
+- **REINFORCE** and **DQN** showed the lowest stability scores, indicating they generally converged to their respective policies with lower variance.
+- **A2C** exhibited a significantly higher Stability Score (129.8), suggesting it experienced much higher volatility or difficulty in settling on a single behavior pattern.
 
 ![Training Stability](plots/training_stability.png)
 
 *Figure 2: Training stability analysis across algorithms*
 
-### Convergence Speed
-Convergence analysis shows how quickly each algorithm reached stable performance:
+### Episodes To Converge
+Convergence analysis contradicts early baseline assumptions:
 
-- **REINFORCE**: ~150 episodes to converge with stable policy updates
-- **DQN**: ~200 episodes with some instability due to exploration-exploitation tradeoff
-- **A2C**: ~180 episodes with smooth learning curves
-- **PPO**: ~170 episodes with good sample efficiency
+- **REINFORCE**: **~638 episodes** (Fastest convergence)
+- **PPO**: **~771 episodes** (Good efficiency)
+- **A2C**: **~1005 episodes** (Slower)
+- **DQN**: **~1057 episodes** (Slowest learner)
 
 ![Convergence Speed](plots/convergence_speed.png)
 
 *Figure 3: Convergence speed comparison across algorithms*
 
 ### Action Distribution Analysis
-Analysis of action selection patterns reveals distinct behavioral strategies:
+Analysis of action selection patterns explains the performance gap:
 
-- **REINFORCE** favored engagement-focused actions (eye contact, storytelling)
-- **DQN** showed more balanced exploration across all action types
-- **A2C** strongly preferred high-impact actions like energy increase and eye contact
-- **PPO** demonstrated strategic action selection with emphasis on engagement techniques
+- **PPO and REINFORCE** learned a balanced strategy: utilizing engagement actions (Storytelling, Eye Contact) to accumulate immediate rewards while correctly triggering 'Next Slide' to gain completion bonuses.
+- **DQN** struggled to credit the 'Next Slide' action correctly, often getting stuck spamming immediate-reward actions without progressing the presentation.
 
 ![Action Distribution](plots/action_distribution_analysis.png)
 
 *Figure 4: Action distribution analysis across algorithms*
 
-### Generalization Performance
-Testing on unseen presentation scenarios revealed generalization capabilities:
-
-- **REINFORCE** maintained 91% of training performance, showing excellent generalization
-- **PPO** demonstrated 91% generalization capability, matching REINFORCE
-- **DQN** showed 87% generalization with some performance drop
-- **A2C** maintained 88% of training performance
+### Generalization
+Testing on unseen presentation scenarios (as shown in Figure 5) revealed that Policy Gradient methods generalized significantly better than value-based methods. Both PPO and REINFORCE maintained high reward levels when initialized with random audience temperaments.
 
 ![Generalization Analysis](plots/generalization_analysis.png)
 
@@ -205,30 +195,29 @@ Testing on unseen presentation scenarios revealed generalization capabilities:
 ### Hyperparameter Sensitivity
 Hyperparameter analysis revealed key insights:
 
-- **Learning rate** was the most critical parameter across all algorithms
-- **Gamma** (discount factor) showed moderate correlation with final performance
-- **Exploration parameters** significantly impacted DQN performance
-- **Entropy coefficient** played a crucial role in policy gradient methods
+- **Learning Rate** was the most critical parameter; specific rates (around 0.0005) consistently led to higher rewards (approx 60-78 range).
+- **Gamma** (discount factor) values near 0.99 were essential for the agents to value the 'Completion Bonus'.
 
 ![Hyperparameter Analysis](plots/performance_summary.png)
 
 *Figure 6: Performance summary across all algorithms*
 
 ## Conclusion and Discussion
-The Pitch Coach environment successfully demonstrated that reinforcement learning can effectively optimize presentation delivery strategies. REINFORCE (implemented via PPO) emerged as the most effective algorithm, achieving the highest rewards through stable policy optimization that naturally suits the sequential decision-making nature of presentation delivery.
+The Pitch Coach environment successfully demonstrated that reinforcement learning can effectively optimize presentation delivery strategies. **PPO (Proximal Policy Optimization)** emerged as the most robust algorithm, achieving the highest peak rewards, while **REINFORCE** proved to be the most efficient learner with the fastest convergence time.
+
+Contrary to initial observations, the data confirms that the agents **successfully learned to navigate the presentation structure.** The top-performing agents achieved rewards near 80, which is only mathematically possible if they successfully transitioned through slides to trigger completion bonuses.
 
 **Key Success Factors:**
-- The reward structure effectively balanced immediate engagement gains with long-term presentation progression
-- The 6-dimensional observation space captured essential presentation state information
-- Action design enabled meaningful strategic choices for presenters
+- **Policy Gradient Dominance:** PPO and REINFORCE significantly outperformed DQN, indicating that learning the policy directly is more effective for high-dimensional, stochastic presentation scoring.
+- **Effective Reward Shaping:** The high max rewards confirm that the reward structure successfully motivated agents to balance immediate engagement with long-term goals.
 
 **Algorithm-Specific Insights:**
-- **REINFORCE/PPO**: Excellent for stable policy learning in presentation contexts
-- **DQN**: Good for exploration but requires careful tuning for presentation tasks
-- **A2C**: Reliable performer with consistent learning characteristics
+- **PPO:** The gold standard for this task (Mean: 49.2).
+- **REINFORCE:** Surprisingly effective and fast (Converged ~638 eps).
+- **DQN:** The weakest performer (Mean: 34.2), struggling to capture sequential dependencies.
 
 **Practical Implications:**
-This research demonstrates the potential for AI-powered presentation coaching tools that can provide objective, data-driven feedback to help founders and presenters improve their delivery skills through simulated practice environments.
+This research demonstrates the potential for AI-powered presentation coaching tools. The successful agents proved that an optimal strategy exists—balancing steady pacing with bursts of high-energy engagement—which can be codified and taught to human presenters.
 
 **Future Work Directions:**
 - Integration with real-time speech and gesture analysis
