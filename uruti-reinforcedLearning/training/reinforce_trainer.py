@@ -1,7 +1,6 @@
 """
 REINFORCE trainer (PyTorch) with TensorBoard logging.
 
-Save as: training/reinforce_trainer.py
 """
 import os
 import json

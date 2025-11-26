@@ -7,7 +7,7 @@ import os
 import cv2
 import wave
 import pyaudio
-import pygame  # Add missing import
+import pygame  
 from datetime import datetime
 from stable_baselines3 import DQN, PPO, A2C
 from environment.pitch_env import PitchCoachEnv

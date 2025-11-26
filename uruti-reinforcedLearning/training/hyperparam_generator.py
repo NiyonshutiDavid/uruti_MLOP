@@ -1,5 +1,5 @@
 """
-Generate 10 hyperparameter JSON files for each algorithm:
+Generate 10 hyperparameter JSON files for each algorithm which can be configured later:
 configs/dqn/run_1.json ... run_10.json
 configs/ppo/run_1.json ...
 configs/a2c/run_1.json ...

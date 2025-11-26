@@ -1,4 +1,4 @@
-# environment/custom_env.py
+# Custom env file for Pitch Coach with enhanced UI
 import gymnasium as gym
 from gymnasium import spaces
 import numpy as np
